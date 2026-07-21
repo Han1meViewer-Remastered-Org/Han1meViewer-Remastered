@@ -66,7 +66,7 @@ val HANIME_LOGIN_URL = HANIME_BASE_URL + "login"
 
 // github url
 
-const val HA1_GITHUB_URL = "https://github.com/misaka10032w/Han1meViewer"
+const val HA1_GITHUB_URL = "https://github.com/5APU-A340/Han1meViewer-Remastered"
 
 const val HA1_GITHUB_ISSUE_URL = "$HA1_GITHUB_URL/issues"
 
@@ -74,7 +74,7 @@ const val HA1_GITHUB_FORUM_URL = "$HA1_GITHUB_URL/discussions"
 
 const val HA1_GITHUB_RELEASES_URL = "$HA1_GITHUB_URL/releases"
 
-const val HA1_GITHUB_API_URL = "https://api.github.com/repos/misaka10032w/Han1meViewer/"
+const val HA1_GITHUB_API_URL = "https://api.github.com/repos/5APU-A340/Han1meViewer-Remastered/"
 const val FIREBASE_REALTIME_DATABASE = "https://han1meviewer-86e5f-default-rtdb.asia-southeast1.firebasedatabase.app/"
 // for Shared Preference
 
