@@ -42,6 +42,16 @@
 - `arm64-v8a` / `armeabi-v7a` / `x86` / `x86_64`：仅含对应架构 so 库，安装包更小，按设备架构选择安装。
 - `universal`：包含全部架构，适用于不确定设备架构或需要通用安装包的场景。
 
+除最新版本外，还补充重新编译了原仓库归档前最后几个正式版本，方便需要旧版本的用户下载：
+
+- [v0.25.0](../../releases/tag/v0.25.0-remastered)
+- [v0.23.5](../../releases/tag/v0.23.5-remastered)
+- [v0.23.0](../../releases/tag/v0.23.0-remastered)
+- [v0.22.0](../../releases/tag/v0.22.0-remastered)
+- [v0.21.0](../../releases/tag/v0.21.0-remastered)
+
+这些历史版本均为源码原样重新编译，仅做了签名、包名和依赖镜像等构建层面的必要调整，不包含任何功能性修改。
+
 均为 Release 版，已用本仓库独立签名密钥签名。如需未签名的调试版本，可查看最新版本对应 Release 中的 Debug 包。
 
 其他下载渠道：原仓库（[misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer)）已归档且发行版已清空，若需要原始未修改版本，可参考第三方镜像站点，例如 [SourceForge 镜像](https://sourceforge.net/projects/han1meviewer.mirror/)（第三方维护，与本仓库无关，请自行甄别可信度）。
