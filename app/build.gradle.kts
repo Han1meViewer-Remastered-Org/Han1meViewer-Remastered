@@ -64,8 +64,8 @@ android {
         abi {
             isEnable = (gradle.startParameter.taskRequests.toString().contains("Release"))
             reset()
-            include("arm64-v8a")
-            isUniversalApk = false
+            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            isUniversalApk = true
         }
     }
 
@@ -123,10 +123,12 @@ kotlin {
 androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
-
+            val impl = output as VariantOutputImpl
+            val abiFilter = impl.filters.find { it.filterType.name == "ABI" }?.identifier
+            val suffix = if (abiFilter != null) "-$abiFilter" else "-universal"
             //  val apkName = "你的应用名_V${output.versionName.get()}_Build${output.versionCode.get()}_${variant.buildType}.apk"
-            val apkName = "Han1meViewer-v${output.versionName.get()}.apk"
-            (output as VariantOutputImpl).outputFileName = apkName
+            val apkName = "Han1meViewer-v${output.versionName.get()}$suffix.apk"
+            impl.outputFileName = apkName
         }
     }
 }
