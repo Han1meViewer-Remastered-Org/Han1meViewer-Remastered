@@ -1,5 +1,16 @@
 [
   {
+    "title": "Han1meViewer 重制版 v1.1.2 更新详情",
+    "content": "v1.1.2 更新内容：\n1. 修复关闭首页公告后 24 小时内无法再查看、也会错过新公告发布的问题；\n2. 公告拉取改为按固定间隔自动刷新（默认 6 小时），设置→首页设置→公告拉取间隔 中可选 3/6/12/23 小时，或选择不拉取；\n3. 左侧菜单新增“公告”入口，随时可手动查看当前有效公告，不受拉取间隔限制；\n4. 完善关于页鸣谢内容，补全上游 Fork 链路署名（misaka10032w/Han1meViewer → YenalyLiew/Han1meViewer）。\n本重制版使用独立签名与独立包名，仅作维护与兼容性增强之用，与原作者及其服务无隶属关系。\n仓库：https://github.com/5APU-A340/Han1meViewer-Remastered",
+    "positiveText": "前往仓库",
+    "negativeText": "知道了",
+    "timestamp": 1784822400,
+    "priority": 0,
+    "imageUrl": null,
+    "isActive": true,
+    "actionUrl": "https://github.com/5APU-A340/Han1meViewer-Remastered"
+  },
+  {
     "title": "Han1meViewer 重制版 v1.1.0 发布",
     "content": "欢迎使用 Han1meViewer 社区重制维护版。本版本要点：\n1. 修复了此前打开即闪退的问题；\n2. 针对鸿蒙（非 NEXT）与老版本 Android/WebView 增强了 Cloudflare 验证：改进了应用内验证流程，并新增“手动导入 Cookie”兜底通道（设置→网络设置→Cloudflare 手动验证）；\n3. 新增“关于/鸣谢”页面，完善应用内检查更新；\n4. 公告源已迁移至本重制版仓库自托管。\n本重制版使用独立签名与独立包名，仅作维护与兼容性增强之用，与原作者及其服务无隶属关系。\n仓库：https://github.com/5APU-A340/Han1meViewer-Remastered",
     "positiveText": "前往仓库",
@@ -7,7 +18,7 @@
     "timestamp": 1784678400,
     "priority": 1,
     "imageUrl": null,
-    "isActive": true,
+    "isActive": false,
     "actionUrl": "https://github.com/5APU-A340/Han1meViewer-Remastered"
   }
 ]
