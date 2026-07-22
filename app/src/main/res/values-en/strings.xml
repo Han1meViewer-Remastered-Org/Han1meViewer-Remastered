@@ -882,4 +882,24 @@ Recommendations are as follows:\n
         <item>Excitedly rubbing hands together in anticipation…</item>
         <item>◝(⑅•ᴗ•⑅)◜..°♡ Teleporting…</item>
     </string-array>
+    <!-- v1.1.0 remastered additions -->
+    <string name="about_remastered_desc">This is a community remastered maintenance build of Han1meViewer, with its own signing key and package name. It fixes issues left in the original and is actively maintained. Not affiliated with the original author or their services.</string>
+    <string name="about_repo">GitHub Repository</string>
+    <string name="credits">Credits</string>
+    <string name="credits_content">Thanks to the original author Yenaly Liew and all contributors; thanks to the community for exploring compatibility approaches (including the old-device verification ideas from Han1meViewer-Compat). This remastered build exists purely for maintenance and compatibility.</string>
+    <string name="credits_original_repo">Original project (Yenaly/Han1meViewer)</string>
+    <string name="cf_reload">Reload</string>
+    <string name="cf_manual_import_entry">Import Cookie</string>
+    <string name="cf_manual_import_title">Import Cloudflare Cookie Manually</string>
+    <string name="cf_manual_import_desc">If this device\'s WebView is too old (common on some HarmonyOS / older Android) to complete the Cloudflare challenge in-app, complete it in a desktop or up-to-date browser, then copy the cf_clearance and that browser\'s User-Agent below. The two must be used together.</string>
+    <string name="cf_manual_cookie_label">cf_clearance value or full Cookie</string>
+    <string name="cf_manual_cookie_hint">Paste just the cf_clearance value, or the whole Cookie string containing cf_clearance=.</string>
+    <string name="cf_manual_ua_label">Matching User-Agent</string>
+    <string name="cf_manual_ua_hint">Must match the User-Agent of the browser that generated the cf_clearance, otherwise it will be rejected.</string>
+    <string name="cf_paste_from_clipboard">Paste from clipboard</string>
+    <string name="cf_manual_clear">Clear</string>
+    <string name="cf_manual_saved">Manual verification info saved</string>
+    <string name="cf_manual_cleared">Manual verification info cleared</string>
+    <string name="cf_manual_import_setting_title">Cloudflare Manual Verification</string>
+    <string name="cf_manual_import_setting_summary">When an old device can\'t verify in-app, import cf_clearance and User-Agent manually</string>
 </resources>

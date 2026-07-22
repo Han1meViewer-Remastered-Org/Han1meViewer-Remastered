@@ -72,6 +72,26 @@ object Preferences {
         }
     val cloudFlareCookieStateFlow = MutableStateFlow(cloudFlareCookie)
 
+    /**
+     * 手动导入 Cloudflare Cookie 时使用的 User-Agent 覆盖值。
+     *
+     * Cloudflare 的 cf_clearance 与生成它的 User-Agent 绑定，
+     * 手动从外部浏览器导入 cf_clearance 时必须同时携带对应 UA，否则会被拒。
+     * 为空表示不覆盖，使用默认 [USER_AGENT]。
+     */
+    private const val CLOUDFLARE_UA_OVERRIDE = "cf_user_agent_override"
+
+    var cloudFlareUserAgentOverride: String
+        get() = getSpValue(CLOUDFLARE_UA_OVERRIDE, EMPTY_STRING)
+        set(value) = putSpValue(CLOUDFLARE_UA_OVERRIDE, value)
+
+    /**
+     * 实际用于网络请求与验证 WebView 的 User-Agent：
+     * 有手动覆盖值则用覆盖值，否则用默认 [USER_AGENT]。
+     */
+    val effectiveUserAgent: String
+        get() = cloudFlareUserAgentOverride.ifBlank { USER_AGENT }
+
     // 更新 相關
 
     private const val UPDATE_NODE_ID = "update_node_id"

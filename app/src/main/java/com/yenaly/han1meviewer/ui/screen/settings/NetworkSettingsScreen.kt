@@ -107,6 +107,7 @@ fun NetworkSettingsScreen(
     onDismissDelayTest: () -> Unit,
     onDismissDohTest: () -> Unit,
     onApplyProxy: (Int, String, Int) -> Unit,
+    onOpenCloudflareManualImport: () -> Unit,
 ) {
     var showDomainDialog by rememberSaveable { mutableStateOf(false) }
     var showProxyDialog by rememberSaveable { mutableStateOf(false) }
@@ -227,6 +228,15 @@ fun NetworkSettingsScreen(
                 summary = state.proxySummary,
                 iconRes = R.drawable.baseline_vpn_24,
                 onClick = { showProxyDialog = true },
+            )
+        }
+
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.cf_manual_import_setting_title),
+                summary = stringResource(R.string.cf_manual_import_setting_summary),
+                iconRes = R.drawable.baseline_vpn_24,
+                onClick = onOpenCloudflareManualImport,
             )
         }
 
@@ -829,6 +839,7 @@ private fun NetworkSettingsScreenPreview() {
             onDismissDelayTest = {},
             onDismissDohTest = {},
             onApplyProxy = { _, _, _ -> },
+            onOpenCloudflareManualImport = {},
         )
     }
 }

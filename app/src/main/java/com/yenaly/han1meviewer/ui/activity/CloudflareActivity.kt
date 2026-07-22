@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -17,9 +19,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.preference.PreferenceManager
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.Preferences.cloudFlareCookie
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.USER_AGENT
+import com.yenaly.han1meviewer.logic.network.ServiceCreator
+import com.yenaly.han1meviewer.ui.screen.settings.dialog.CloudflareManualImportDialog
+import com.yenaly.han1meviewer.ui.screen.settings.dialog.normalizeCloudflareCookieInput
 import com.yenaly.han1meviewer.ui.screen.web.CloudflareScreen
 import com.yenaly.han1meviewer.ui.theme.HanimeTheme
 import com.yenaly.han1meviewer.util.CookieString
@@ -34,6 +39,25 @@ class CloudflareActivity : AppCompatActivity() {
 
     private val progressState = mutableIntStateOf(0)
     private val tipTextState = mutableStateOf("")
+    private val showManualImportState = mutableStateOf(false)
+
+    private var webView: WebView? = null
+    private var requestUrl: String = ""
+    private val cookieMgr by lazy { CookieManager.getInstance() }
+    private val handler = Handler(Looper.getMainLooper())
+
+    /**
+     * 定时轮询 cf_clearance cookie：一旦出现即视为验证通过。
+     * 比读取 document.head 的启发式更稳，对老内核/鸿蒙 WebView 更友好。
+     */
+    private val pollRunnable = object : Runnable {
+        override fun run() {
+            if (isFinishing || isDestroyed) return
+            if (!trySucceed()) {
+                handler.postDelayed(this, 800)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -43,6 +67,7 @@ class CloudflareActivity : AppCompatActivity() {
             finish()
             return
         }
+        requestUrl = url
 
         tipTextState.value = getString(R.string.complete_cloudflare_verification_with_warning)
 
@@ -54,25 +79,69 @@ class CloudflareActivity : AppCompatActivity() {
                     progress = progressState.intValue,
                     tipText = tipTextState.value,
                     onClose = { finish() },
+                    onReload = { webView?.reload() },
+                    onManualImport = { showManualImportState.value = true },
                     webViewFactory = { createWebView(url) },
                 )
+                if (showManualImportState.value) {
+                    CloudflareManualImportDialog(
+                        initialCookie = cloudFlareCookie.cookie,
+                        initialUserAgent = Preferences.cloudFlareUserAgentOverride,
+                        onConfirm = { cookieInput, uaInput ->
+                            cloudFlareCookie = CookieString(normalizeCloudflareCookieInput(cookieInput))
+                            Preferences.cloudFlareUserAgentOverride = uaInput
+                            ServiceCreator.rebuildOkHttpClient()
+                            showManualImportState.value = false
+                            onFinished?.invoke()
+                            onFinished = null
+                            finish()
+                        },
+                        onClear = {
+                            cloudFlareCookie = CookieString("")
+                            Preferences.cloudFlareUserAgentOverride = ""
+                            ServiceCreator.rebuildOkHttpClient()
+                            showManualImportState.value = false
+                        },
+                        onDismiss = { showManualImportState.value = false },
+                    )
+                }
             }
         }
+
+        handler.postDelayed(pollRunnable, 800)
+    }
+
+    /**
+     * 检查 cf_clearance 是否已下发；下发则保存 cookie 并结束验证。
+     */
+    private fun trySucceed(): Boolean {
+        val cookies = cookieMgr.getCookie(requestUrl) ?: return false
+        if (cookies.contains("cf_clearance")) {
+            cloudFlareCookie = CookieString(cookies)
+            cookieMgr.flush()
+            onFinished?.invoke()
+            onFinished = null
+            finish()
+            return true
+        }
+        return false
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun createWebView(url: String): WebView {
         return WebView(this).apply {
+            webView = this
             val wv = this
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 javaScriptCanOpenWindowsAutomatically = true
-                userAgentString = USER_AGENT
+                // 与网络请求保持一致的 UA（可能被手动导入的 UA 覆盖）。
+                userAgentString = Preferences.effectiveUserAgent
             }
 
-            val cookieMgr = CookieManager.getInstance().apply {
+            cookieMgr.apply {
                 setAcceptCookie(true)
                 setAcceptThirdPartyCookies(wv, true)
             }
@@ -114,25 +183,6 @@ class CloudflareActivity : AppCompatActivity() {
             webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                     progressState.intValue = newProgress
-                    if (newProgress >= 90) {
-                        view?.postDelayed({
-                            view.evaluateJavascript("document.head.innerHTML") { html ->
-                                if (!html.contains("#challenge-form") &&
-                                    !html.contains("#challenge-success-text") &&
-                                    !html.contains("#challenge-error-text")
-                                ) {
-                                    val cookies = cookieMgr.getCookie(url) ?: ""
-                                    if (cookies.contains("cf_clearance")) {
-                                        cloudFlareCookie = CookieString(cookies)
-                                        cookieMgr.flush()
-                                        onFinished?.invoke()
-                                        onFinished = null
-                                        finish()
-                                    }
-                                }
-                            }
-                        }, 1000)
-                    }
                 }
             }
             loadUrl(url)
@@ -141,6 +191,8 @@ class CloudflareActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
+        webView = null
     }
 
     private fun applyAppLocale(context: Context): Context {

@@ -1,14 +1,19 @@
 package com.yenaly.han1meviewer.ui.screen.web
 
 import android.webkit.WebView
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,6 +34,8 @@ fun CloudflareScreen(
     progress: Int,
     tipText: String,
     onClose: () -> Unit,
+    onReload: () -> Unit,
+    onManualImport: () -> Unit,
     webViewFactory: () -> WebView,
 ) {
     HanimeScaffold(
@@ -54,20 +61,41 @@ fun CloudflareScreen(
                 )
             }
 
-            Card(
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(
-                    text = tipText,
-                    modifier = Modifier.padding(12.dp),
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                ) {
+                    Text(
+                        text = tipText,
+                        modifier = Modifier.padding(12.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onReload,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.cf_reload))
+                    }
+                    Button(
+                        onClick = onManualImport,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.cf_manual_import_entry))
+                    }
+                }
             }
         }
     }
@@ -82,6 +110,8 @@ fun LoginScreenPreview() {
             progress = 40,
             tipText = "提示文本",
             onClose = {},
+            onReload = {},
+            onManualImport = {},
             webViewFactory = {
                 WebView(context).apply {
                 }
@@ -89,4 +119,3 @@ fun LoginScreenPreview() {
         )
     }
 }
-

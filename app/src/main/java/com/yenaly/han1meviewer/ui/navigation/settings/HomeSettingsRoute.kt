@@ -55,6 +55,7 @@ import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.screen.settings.HomeSettingsScreen
+import com.yenaly.han1meviewer.ui.screen.settings.dialog.AboutDialog
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.LicenseDialog
 import com.yenaly.han1meviewer.ui.screen.settings.model.HomeSettingsUiState
 import com.yenaly.han1meviewer.ui.screen.home.homepage.defaultHomeCategoryPreferenceItems
@@ -118,6 +119,7 @@ fun HomeSettingsRouteScreen(
     var cacheKey by remember { mutableIntStateOf(0) }
     var showClearCacheConfirm by remember { mutableStateOf(false) }
     var showLicenseScreen by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
     var showRestartConfirmDialog by remember { mutableStateOf(false) }
     var showAnalyticsDialog by remember { mutableStateOf(false) }
     var showLauncherPicker by remember { mutableStateOf(false) }
@@ -352,7 +354,7 @@ fun HomeSettingsRouteScreen(
         },
         onOpenFakeLauncherIcon = { showLauncherPicker = true },
         onOpenOpenSourceLicense = { showLicenseScreen = true },
-        onOpenAbout = {},
+        onOpenAbout = { showAboutDialog = true },
         onClearCache = {
             val cacheDir = context.cacheDir
             val folderSize = cacheDir?.folderSize ?: 0L
@@ -424,6 +426,12 @@ fun HomeSettingsRouteScreen(
     if (showLicenseScreen) {
         LicenseDialog(
             onDismiss = { showLicenseScreen = false }
+        )
+    }
+
+    if (showAboutDialog) {
+        AboutDialog(
+            onDismiss = { showAboutDialog = false }
         )
     }
 

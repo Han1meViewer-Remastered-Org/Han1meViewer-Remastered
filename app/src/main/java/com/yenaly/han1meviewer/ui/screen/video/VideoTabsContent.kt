@@ -2,13 +2,14 @@ package com.yenaly.han1meviewer.ui.screen.video
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
@@ -16,7 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 data class VideoTabItem(
@@ -67,22 +70,17 @@ fun VideoTabsContent(
                             }
                         },
                         text = {
-                            if (item.badgeCount > 0) {
-                                BadgedBox(
-                                    badge = {
-                                        Badge { Text(item.badgeCount.toString()) }
-                                    }
-                                ) {
-                                    Text(
-                                        text = androidx.compose.ui.res.stringResource(item.titleRes),
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                            } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
                                 Text(
                                     text = androidx.compose.ui.res.stringResource(item.titleRes),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
+                                if (item.badgeCount > 0) {
+                                    Badge { Text(item.badgeCount.toString()) }
+                                }
                             }
                         },
                     )

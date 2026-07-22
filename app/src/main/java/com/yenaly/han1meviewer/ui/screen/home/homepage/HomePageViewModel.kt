@@ -6,8 +6,8 @@ import androidx.core.content.edit
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.database.FirebaseDatabase
-import com.yenaly.han1meviewer.FIREBASE_REALTIME_DATABASE
+import com.yenaly.han1meviewer.HA1_ANNOUNCEMENTS_URL
+import com.yenaly.han1meviewer.HJson
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SAVED_USER_ID
@@ -17,6 +17,8 @@ import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
 import com.yenaly.han1meviewer.logic.exception.LoginStateExpiredException
 import com.yenaly.han1meviewer.logic.model.Announcement
+import com.yenaly.han1meviewer.logic.model.AnnouncementDto
+import com.yenaly.han1meviewer.logic.network.ServiceCreator
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.logout
@@ -32,9 +34,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
+import kotlinx.serialization.decodeFromString
+import okhttp3.Request
 import kotlin.time.Duration.Companion.milliseconds
 
 class HomePageViewModel: ViewModel() {
@@ -45,8 +48,6 @@ class HomePageViewModel: ViewModel() {
 
     private val _homePageFlow = MutableStateFlow<PageState<HomeData>>(PageState.Loading)
     val homePageFlow = _homePageFlow.asStateFlow()
-
-    private val database = FirebaseDatabase.getInstance(FIREBASE_REALTIME_DATABASE)
 
     private val _sessionExpiredMessage = MutableSharedFlow<SessionExpiredMessage>()
     val sessionExpiredMessage = _sessionExpiredMessage
@@ -73,7 +74,7 @@ class HomePageViewModel: ViewModel() {
             }
             val announcementsDeferred = async(Dispatchers.IO) {
                 withTimeoutOrNull(ANNOUNCEMENTS_TIMEOUT_MILLIS.milliseconds) {
-                    fetchAnnouncementsFromFirebase()
+                    fetchAnnouncements()
                 }.orEmpty()
             }
             NetworkRepo.getHomePage().collect { networkState ->
@@ -106,40 +107,30 @@ class HomePageViewModel: ViewModel() {
             }
         }
     }
-    private suspend fun fetchAnnouncementsFromFirebase(): List<Announcement> =
-        suspendCancellableCoroutine { continuation ->
-            val lastDismissTime = getSpValue("last_dismiss_time", 0L, "setting_pref")
-            val shouldShowAnno = System.currentTimeMillis() - lastDismissTime > 24 * 60 * 60 * 1000L
-            if (!shouldShowAnno) {
-                continuation.resume(emptyList())
-                return@suspendCancellableCoroutine
-            }
+    /**
+     * 从重制版自托管的 announcements.json（GitHub raw）拉取公告。
+     * 任何异常都容错返回空列表，不影响首页加载。
+     */
+    private suspend fun fetchAnnouncements(): List<Announcement> = withContext(Dispatchers.IO) {
+        val lastDismissTime = getSpValue("last_dismiss_time", 0L, "setting_pref")
+        val shouldShowAnno = System.currentTimeMillis() - lastDismissTime > 24 * 60 * 60 * 1000L
+        if (!shouldShowAnno) return@withContext emptyList()
 
-            database.getReference("announcements").get()
-                .addOnSuccessListener { snapshot ->
-                    val list = mutableListOf<Announcement>()
-                    if (snapshot.exists()) {
-                        for (announceSnap in snapshot.children) {
-                            val announcement = announceSnap.getValue(Announcement::class.java)
-                            if (announcement != null && announcement.isActive) {
-                                list.add(announcement)
-                            }
-                        }
-                        if (continuation.isActive) {
-                            continuation.resume(list.sortedBy { it.priority })
-                        }
-                    } else {
-                        if (continuation.isActive) {
-                            continuation.resume(emptyList())
-                        }
-                    }
-                }.addOnFailureListener { e ->
-                    Log.e("Announcement", "读取失败: ${e.message}")
-                    if (continuation.isActive) {
-                        continuation.resume(emptyList()) // 失败也容错返回空列表
-                    }
-                }
+        runCatching {
+            val request = Request.Builder().url(HA1_ANNOUNCEMENTS_URL).get().build()
+            ServiceCreator.downloadClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@use emptyList<Announcement>()
+                val body = response.body.string()
+                HJson.decodeFromString<List<AnnouncementDto>>(body)
+                    .filter { it.isActive }
+                    .sortedBy { it.priority }
+                    .map { it.toAnnouncement() }
+            }
+        }.getOrElse { e ->
+            Log.e("Announcement", "读取失败: ${e.message}")
+            emptyList()
         }
+    }
 
     private companion object {
         const val ANNOUNCEMENTS_TIMEOUT_MILLIS = 5_000L

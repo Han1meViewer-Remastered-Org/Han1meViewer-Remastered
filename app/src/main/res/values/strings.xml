@@ -936,4 +936,24 @@
         <item>搓手手期待ing……</item>
         <item>◝(⑅•ᴗ•⑅)◜..°♡ 傳送中……</item>
     </string-array>
+    <!-- v1.1.0 重製版新增 -->
+    <string name="about_remastered_desc">本應用為 Han1meViewer 的社群重製維護版，使用獨立簽名與獨立套件名，修復原版遺留問題並持續維護。與原作者及其服務無隸屬關係。</string>
+    <string name="about_repo">GitHub 倉庫</string>
+    <string name="credits">鳴謝</string>
+    <string name="credits_content">感謝原專案作者 Yenaly Liew 及所有貢獻者；感謝社群對相容性方案（含 Han1meViewer-Compat 的舊裝置驗證思路）的探索。本重製版僅作維護與相容性增強之用。</string>
+    <string name="credits_original_repo">原專案（Yenaly/Han1meViewer）</string>
+    <string name="cf_reload">重新整理</string>
+    <string name="cf_manual_import_entry">手動匯入 Cookie</string>
+    <string name="cf_manual_import_title">手動匯入 Cloudflare Cookie</string>
+    <string name="cf_manual_import_desc">若本機 WebView 過舊（常見於部分鴻蒙／舊版 Android）無法在應用內完成 Cloudflare 驗證，可在桌面或新版瀏覽器完成驗證後，複製 cf_clearance 與該瀏覽器的 User-Agent 貼到下方。兩者必須配對使用。</string>
+    <string name="cf_manual_cookie_label">cf_clearance 值或完整 Cookie</string>
+    <string name="cf_manual_cookie_hint">可只貼 cf_clearance 的值，或貼含 cf_clearance= 的整段 Cookie。</string>
+    <string name="cf_manual_ua_label">對應的 User-Agent</string>
+    <string name="cf_manual_ua_hint">必須與產生該 cf_clearance 的瀏覽器 User-Agent 一致，否則會被拒。</string>
+    <string name="cf_paste_from_clipboard">從剪貼簿貼上</string>
+    <string name="cf_manual_clear">清除</string>
+    <string name="cf_manual_saved">已儲存手動驗證資訊</string>
+    <string name="cf_manual_cleared">已清除手動驗證資訊</string>
+    <string name="cf_manual_import_setting_title">Cloudflare 手動驗證</string>
+    <string name="cf_manual_import_setting_summary">舊裝置無法在應用內完成驗證時，手動匯入 cf_clearance 與 User-Agent</string>
 </resources>

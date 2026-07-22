@@ -75,6 +75,13 @@ const val HA1_GITHUB_FORUM_URL = "$HA1_GITHUB_URL/discussions"
 const val HA1_GITHUB_RELEASES_URL = "$HA1_GITHUB_URL/releases"
 
 const val HA1_GITHUB_API_URL = "https://api.github.com/repos/5APU-A340/Han1meViewer-Remastered/"
+
+/**
+ * 重制版自托管公告源（仓库根目录的 announcements.json，通过 raw CDN 拉取）。
+ * 维护者提交/修改该文件即可发布或下架公告，无需 Firebase 写入权限。
+ */
+const val HA1_ANNOUNCEMENTS_URL =
+    "https://raw.githubusercontent.com/5APU-A340/Han1meViewer-Remastered/main/announcements.json"
 const val FIREBASE_REALTIME_DATABASE = "https://han1meviewer-86e5f-default-rtdb.asia-southeast1.firebasedatabase.app/"
 // for Shared Preference
 

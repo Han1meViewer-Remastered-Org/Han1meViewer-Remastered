@@ -35,6 +35,9 @@ import com.yenaly.han1meviewer.ui.screen.settings.DelayResultUi
 import com.yenaly.han1meviewer.ui.screen.settings.DohTestResultUi
 import com.yenaly.han1meviewer.ui.screen.settings.NetworkSettingsScreen
 import com.yenaly.han1meviewer.ui.screen.settings.NetworkSettingsUiState
+import com.yenaly.han1meviewer.ui.screen.settings.dialog.CloudflareManualImportDialog
+import com.yenaly.han1meviewer.ui.screen.settings.dialog.normalizeCloudflareCookieInput
+import com.yenaly.han1meviewer.util.CookieString
 import com.yenaly.han1meviewer.util.showAlertDialog
 import com.yenaly.yenaly_libs.ActivityManager
 import com.yenaly.yenaly_libs.utils.applicationContext
@@ -79,6 +82,7 @@ fun NetworkSettingsRouteScreen() {
     var showCustomMirrorValidationError by remember { mutableStateOf(false) }
     var showCustomMirrorWarningConfirm by remember { mutableStateOf(false) }
     var showDohConflictConfirm by remember { mutableStateOf(false) }
+    var showCfManualImport by remember { mutableStateOf(false) }
     var pendingDomainValue by remember { mutableStateOf("") }
     var pendingUseCustomMirrorSite by remember { mutableStateOf(Preferences.useCustomMirrorSite) }
     var pendingCustomMirrorSite by remember { mutableStateOf(Preferences.customMirrorSite) }
@@ -345,7 +349,31 @@ fun NetworkSettingsRouteScreen() {
             HanimeNetwork.rebuildNetwork()
             refreshKey++
         },
+        onOpenCloudflareManualImport = { showCfManualImport = true },
     )
+
+    if (showCfManualImport) {
+        CloudflareManualImportDialog(
+            initialCookie = Preferences.cloudFlareCookie.cookie,
+            initialUserAgent = Preferences.cloudFlareUserAgentOverride,
+            onConfirm = { cookieInput, uaInput ->
+                Preferences.cloudFlareCookie =
+                    CookieString(normalizeCloudflareCookieInput(cookieInput))
+                Preferences.cloudFlareUserAgentOverride = uaInput
+                ServiceCreator.rebuildOkHttpClient()
+                showCfManualImport = false
+                showShortToast(R.string.cf_manual_saved)
+            },
+            onClear = {
+                Preferences.cloudFlareCookie = CookieString(EMPTY_STRING)
+                Preferences.cloudFlareUserAgentOverride = EMPTY_STRING
+                ServiceCreator.rebuildOkHttpClient()
+                showCfManualImport = false
+                showShortToast(R.string.cf_manual_cleared)
+            },
+            onDismiss = { showCfManualImport = false },
+        )
+    }
 
     ConfirmDialog(
         visible = showDomainRestartConfirm,

@@ -887,4 +887,24 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
         <item>ワクワクしながら待機中……</item>
         <item>◝(⑅•ᴗ•⑅)◜..°♡ 転送中……</item>
     </string-array>
+    <!-- v1.1.0 リマスター追加分 -->
+    <string name="about_remastered_desc">本アプリは Han1meViewer のコミュニティ・リマスター保守版です。独自の署名鍵とパッケージ名を使用し、原版の不具合を修正して継続的に保守しています。原作者およびそのサービスとは無関係です。</string>
+    <string name="about_repo">GitHub リポジトリ</string>
+    <string name="credits">クレジット</string>
+    <string name="credits_content">原プロジェクト作者 Yenaly Liew 氏および全ての貢献者に感謝します。また、互換性対応（Han1meViewer-Compat の旧端末認証手法を含む）を探究したコミュニティに感謝します。本リマスター版は保守と互換性向上のみを目的としています。</string>
+    <string name="credits_original_repo">オリジナルプロジェクト（Yenaly/Han1meViewer）</string>
+    <string name="cf_reload">再読み込み</string>
+    <string name="cf_manual_import_entry">Cookie を取り込む</string>
+    <string name="cf_manual_import_title">Cloudflare Cookie を手動で取り込む</string>
+    <string name="cf_manual_import_desc">端末の WebView が古く（一部の HarmonyOS／旧 Android に多い）、アプリ内で Cloudflare 認証を完了できない場合は、PC または新しいブラウザで認証を済ませ、cf_clearance とそのブラウザの User-Agent を下に貼り付けてください。両者は必ずセットで使用します。</string>
+    <string name="cf_manual_cookie_label">cf_clearance の値または Cookie 全体</string>
+    <string name="cf_manual_cookie_hint">cf_clearance の値だけ、または cf_clearance= を含む Cookie 全体を貼り付けてください。</string>
+    <string name="cf_manual_ua_label">対応する User-Agent</string>
+    <string name="cf_manual_ua_hint">cf_clearance を生成したブラウザの User-Agent と一致している必要があります。一致しないと拒否されます。</string>
+    <string name="cf_paste_from_clipboard">クリップボードから貼り付け</string>
+    <string name="cf_manual_clear">クリア</string>
+    <string name="cf_manual_saved">手動認証情報を保存しました</string>
+    <string name="cf_manual_cleared">手動認証情報をクリアしました</string>
+    <string name="cf_manual_import_setting_title">Cloudflare 手動認証</string>
+    <string name="cf_manual_import_setting_summary">旧端末でアプリ内認証ができない場合、cf_clearance と User-Agent を手動で取り込みます</string>
 </resources>

@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Han1meViewer 重制版 v1.1.0 发布",
+    "content": "欢迎使用 Han1meViewer 社区重制维护版。本版本要点：\n1. 修复了此前打开即闪退的问题；\n2. 针对鸿蒙（非 NEXT）与老版本 Android/WebView 增强了 Cloudflare 验证：改进了应用内验证流程，并新增“手动导入 Cookie”兜底通道（设置→网络设置→Cloudflare 手动验证）；\n3. 新增“关于/鸣谢”页面，完善应用内检查更新；\n4. 公告源已迁移至本重制版仓库自托管。\n本重制版使用独立签名与独立包名，仅作维护与兼容性增强之用，与原作者及其服务无隶属关系。\n仓库：https://github.com/5APU-A340/Han1meViewer-Remastered",
+    "positiveText": "前往仓库",
+    "negativeText": "知道了",
+    "timestamp": 1784678400,
+    "priority": 1,
+    "imageUrl": null,
+    "isActive": true
+  }
+]

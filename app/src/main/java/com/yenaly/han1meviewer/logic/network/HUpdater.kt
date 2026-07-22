@@ -65,15 +65,38 @@ object HUpdater {
                 val ver = HanimeNetwork.githubService.getLatestVersion()
                 val isNeeded = checkNeedUpdate(ver.tagName)
                 if (isNeeded) {
+                    val asset = ver.pickBestApkAsset() ?: return null
                     return Latest(
                         ver.tagName, ver.body,
-                        ver.assets.first().browserDownloadURL,
-                        ver.assets.first().nodeID
+                        asset.browserDownloadURL,
+                        asset.nodeID
                     )
                 }
             }
         }
         return null
+    }
+
+    /**
+     * 从 Release 资源里挑选最合适的 APK：
+     * 优先匹配当前设备 ABI 的分架构包（体积更小、正确），
+     * 找不到则用 universal 通用包，再不行退回第一个 .apk / 第一个资源。
+     */
+    private fun com.yenaly.han1meviewer.logic.model.github.Release.pickBestApkAsset():
+            com.yenaly.han1meviewer.logic.model.github.Release.Asset? {
+        if (assets.isEmpty()) return null
+        val apkAssets = assets.filter { it.name.endsWith(".apk", ignoreCase = true) }
+        if (apkAssets.isEmpty()) return assets.first()
+        // 1) 按设备支持的 ABI 顺序匹配分架构包
+        for (abi in android.os.Build.SUPPORTED_ABIS) {
+            apkAssets.firstOrNull { it.name.contains("-$abi.apk", ignoreCase = true) }
+                ?.let { return it }
+        }
+        // 2) universal 通用包
+        apkAssets.firstOrNull { it.name.contains("universal", ignoreCase = true) }
+            ?.let { return it }
+        // 3) 兜底：第一个 apk
+        return apkAssets.first()
     }
 
     /**
