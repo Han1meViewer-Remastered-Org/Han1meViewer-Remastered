@@ -504,10 +504,11 @@ fun HomeSettingsScreen(
             )
         }
         item {
-            SettingInfoItem(
+            SettingNavigationItem(
                 title = stringResource(R.string.about),
                 summary = state.versionSummary,
                 iconRes = R.drawable.ic_baseline_info_24,
+                onClick = onOpenAbout,
             )
         }
     }

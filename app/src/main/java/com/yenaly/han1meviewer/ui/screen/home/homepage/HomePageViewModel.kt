@@ -6,7 +6,6 @@ import androidx.core.content.edit
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.yenaly.han1meviewer.HA1_ANNOUNCEMENTS_URL
 import com.yenaly.han1meviewer.HJson
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
@@ -18,7 +17,7 @@ import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
 import com.yenaly.han1meviewer.logic.exception.LoginStateExpiredException
 import com.yenaly.han1meviewer.logic.model.Announcement
 import com.yenaly.han1meviewer.logic.model.AnnouncementDto
-import com.yenaly.han1meviewer.logic.network.ServiceCreator
+import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.logout
@@ -37,7 +36,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.decodeFromString
-import okhttp3.Request
 import kotlin.time.Duration.Companion.milliseconds
 
 class HomePageViewModel: ViewModel() {
@@ -108,7 +106,8 @@ class HomePageViewModel: ViewModel() {
         }
     }
     /**
-     * 从重制版自托管的 announcements.json（GitHub raw）拉取公告。
+     * 从重制版自托管的 announcements.json 拉取公告。
+     * 走 GitHub Contents API（api.github.com，与检查更新同一可靠通道），
      * 任何异常都容错返回空列表，不影响首页加载。
      */
     private suspend fun fetchAnnouncements(): List<Announcement> = withContext(Dispatchers.IO) {
@@ -117,15 +116,13 @@ class HomePageViewModel: ViewModel() {
         if (!shouldShowAnno) return@withContext emptyList()
 
         runCatching {
-            val request = Request.Builder().url(HA1_ANNOUNCEMENTS_URL).get().build()
-            ServiceCreator.downloadClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@use emptyList<Announcement>()
-                val body = response.body.string()
-                HJson.decodeFromString<List<AnnouncementDto>>(body)
-                    .filter { it.isActive }
-                    .sortedBy { it.priority }
-                    .map { it.toAnnouncement() }
-            }
+            val response = HanimeNetwork.githubService.getAnnouncements()
+            if (!response.isSuccessful) return@runCatching emptyList<Announcement>()
+            val body = response.body()?.string().orEmpty()
+            HJson.decodeFromString<List<AnnouncementDto>>(body)
+                .filter { it.isActive }
+                .sortedBy { it.priority }
+                .map { it.toAnnouncement() }
         }.getOrElse { e ->
             Log.e("Announcement", "读取失败: ${e.message}")
             emptyList()
@@ -133,7 +130,7 @@ class HomePageViewModel: ViewModel() {
     }
 
     private companion object {
-        const val ANNOUNCEMENTS_TIMEOUT_MILLIS = 5_000L
+        const val ANNOUNCEMENTS_TIMEOUT_MILLIS = 10_000L
     }
 
     fun dismissAnnouncements(){
