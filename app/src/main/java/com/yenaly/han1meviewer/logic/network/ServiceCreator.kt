@@ -125,9 +125,17 @@ object ServiceCreator {
             .addInterceptor(UserAgentInterceptor)
             .addInterceptor(UrlLoggingInterceptor())
             .addInterceptor { chain ->
-                val request = chain.request().newBuilder().addHeader(
-                    "Authorization", "Bearer ${BuildConfig.HA_GITHUB_TOKEN}"
-                ).build()
+                // 仅在有有效 token 时附带 Authorization 头。
+                // 若 token 为空（本地/无 token 构建），发送空的 "Bearer " 会被 GitHub 拒为 401，
+                // 导致检查更新失败；此时应改用匿名请求（受 60 次/小时限流，足够偶尔检查更新）。
+                val token = BuildConfig.HA_GITHUB_TOKEN
+                val request = if (token.isNotBlank()) {
+                    chain.request().newBuilder()
+                        .addHeader("Authorization", "Bearer $token")
+                        .build()
+                } else {
+                    chain.request()
+                }
                 return@addInterceptor chain.proceed(request)
             }
             .build()
