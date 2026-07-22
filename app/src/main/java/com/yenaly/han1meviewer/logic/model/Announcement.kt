@@ -26,10 +26,12 @@ data class Announcement(
     @JvmField val timestamp: Long = 0,
     @JvmField val priority: Int = 1,
     @JvmField val imageUrl: String ? = null,
-    @JvmField val isActive: Boolean = false
+    @JvmField val isActive: Boolean = false,
+    /** 正向按钮点击后要打开的链接（如仓库地址）；为空则仅关闭弹窗。 */
+    @JvmField val actionUrl: String ? = null
 ) {
     //firebase初始化需要一个空的构造函数
-    constructor() : this("", "", null, null, 0L, 1, null, false)
+    constructor() : this("", "", null, null, 0L, 1, null, false, null)
     @OptIn(ExperimentalTime::class)
     fun getFormattedDate(): String {
         return kotlin.time.Instant

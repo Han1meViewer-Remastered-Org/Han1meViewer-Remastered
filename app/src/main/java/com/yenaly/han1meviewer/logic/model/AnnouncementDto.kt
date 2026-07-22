@@ -17,6 +17,7 @@ data class AnnouncementDto(
     val priority: Int = 1,
     val imageUrl: String? = null,
     val isActive: Boolean = false,
+    val actionUrl: String? = null,
 ) {
     fun toAnnouncement(): Announcement = Announcement(
         title = title,
@@ -27,5 +28,6 @@ data class AnnouncementDto(
         priority = priority,
         imageUrl = imageUrl,
         isActive = isActive,
+        actionUrl = actionUrl,
     )
 }

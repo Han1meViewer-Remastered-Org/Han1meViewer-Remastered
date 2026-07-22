@@ -48,6 +48,7 @@ import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeAnnouncements
 import com.yenaly.han1meviewer.ui.screen.home.homepage.saveImageToGallery
+import com.yenaly.yenaly_libs.utils.browse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -149,7 +150,11 @@ fun AnnouncementDialog(
                         Spacer(Modifier.width(8.dp))
                     }
 
-                    TextButton(onClick = onDismiss) {
+                    TextButton(onClick = {
+                        val url = announcementData.actionUrl
+                        if (!url.isNullOrBlank()) context.browse(url)
+                        onDismiss()
+                    }) {
                         Text(
                             text = announcementData.positiveText
                                 ?: stringResource(R.string.i_understand)
