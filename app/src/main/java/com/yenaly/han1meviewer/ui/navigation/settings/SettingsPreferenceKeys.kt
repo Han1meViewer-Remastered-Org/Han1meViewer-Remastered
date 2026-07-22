@@ -66,4 +66,5 @@ object SettingsPreferenceKeys {
     const val MPV_NETWORK_TIMEOUT = "mpv_network_timeout"
     const val CUSTOM_PARAMS = "mpv_custom_parameters"
     const val LAST_UPDATE_POPUP_TIME = "last_update_popup_time"
+    const val ANNOUNCEMENT_FETCH_INTERVAL_HOURS = "announcement_fetch_interval_hours"
 }

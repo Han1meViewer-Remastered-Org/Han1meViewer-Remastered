@@ -821,6 +821,10 @@
     <string name="more">更多</string>
     <string name="announcement">公告</string>
     <string name="announcement_list">公告列表</string>
+    <string name="no_announcement_available">暫無公告</string>
+    <string name="announcement_fetch_interval">公告拉取間隔</string>
+    <string name="announcement_fetch_interval_hours_format">%d 小時</string>
+    <string name="announcement_fetch_interval_off">不拉取（不建議）</string>
     <string name="view_all">查看全部</string>
     <string name="open_menu">打開選單</string>
     <string name="permission_permanently_denied_title">權限被永久拒絕</string>

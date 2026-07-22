@@ -157,6 +157,7 @@ private fun MainDrawerPrimaryItems(
 ) {
     val primaryItems = listOf(
         MainDrawerDestination.Home,
+        MainDrawerDestination.Announcement,
         MainDrawerDestination.Settings,
         MainDrawerDestination.DailyCheckIn,
     )

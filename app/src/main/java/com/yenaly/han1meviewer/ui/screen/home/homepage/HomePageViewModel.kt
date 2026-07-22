@@ -106,35 +106,55 @@ class HomePageViewModel: ViewModel() {
         }
     }
     /**
-     * 从重制版自托管的 announcements.json 拉取公告。
-     * 走 GitHub Contents API（api.github.com，与检查更新同一可靠通道），
-     * 任何异常都容错返回空列表，不影响首页加载。
+     * 实际向 GitHub Contents API 请求 announcements.json，不受拉取间隔限制。
+     * 返回 null 代表请求/解析失败，交给调用方决定是否重置节流计时。
+     */
+    private suspend fun fetchAnnouncementsFromNetwork(): List<Announcement>? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val response = HanimeNetwork.githubService.getAnnouncements()
+                if (!response.isSuccessful) return@runCatching null
+                val body = response.body()?.string().orEmpty()
+                HJson.decodeFromString<List<AnnouncementDto>>(body)
+                    .filter { it.isActive }
+                    .sortedBy { it.priority }
+                    .map { it.toAnnouncement() }
+            }.getOrElse { e ->
+                Log.e("Announcement", "读取失败: ${e.message}")
+                null
+            }
+        }
+
+    /**
+     * 首页自动加载调用，按 [Preferences.announcementFetchIntervalHours] 节流：
+     * 距上次成功拉取不足设定间隔时跳过网络请求；间隔为 0 表示用户关闭了公告拉取。
      */
     private suspend fun fetchAnnouncements(): List<Announcement> = withContext(Dispatchers.IO) {
-        val lastDismissTime = getSpValue("last_dismiss_time", 0L, "setting_pref")
-        val shouldShowAnno = System.currentTimeMillis() - lastDismissTime > 24 * 60 * 60 * 1000L
-        if (!shouldShowAnno) return@withContext emptyList()
+        val intervalHours = Preferences.announcementFetchIntervalHours
+        if (intervalHours <= 0) return@withContext emptyList()
 
-        runCatching {
-            val response = HanimeNetwork.githubService.getAnnouncements()
-            if (!response.isSuccessful) return@runCatching emptyList<Announcement>()
-            val body = response.body()?.string().orEmpty()
-            HJson.decodeFromString<List<AnnouncementDto>>(body)
-                .filter { it.isActive }
-                .sortedBy { it.priority }
-                .map { it.toAnnouncement() }
-        }.getOrElse { e ->
-            Log.e("Announcement", "读取失败: ${e.message}")
-            emptyList()
+        val lastFetchTime = getSpValue("last_announcement_fetch_time", 0L, "setting_pref")
+        val intervalMillis = intervalHours * 60 * 60 * 1000L
+        if (System.currentTimeMillis() - lastFetchTime < intervalMillis) return@withContext emptyList()
+
+        val result = fetchAnnouncementsFromNetwork()
+        if (result != null) {
+            putSpValue("last_announcement_fetch_time", System.currentTimeMillis(), "setting_pref")
         }
+        result ?: emptyList()
     }
+
+    /**
+     * 供左侧菜单“查看公告”手动触发，直接请求最新公告，不受拉取间隔节流影响。
+     */
+    suspend fun fetchAnnouncementsForViewing(): List<Announcement> =
+        fetchAnnouncementsFromNetwork() ?: emptyList()
 
     private companion object {
         const val ANNOUNCEMENTS_TIMEOUT_MILLIS = 10_000L
     }
 
     fun dismissAnnouncements(){
-        putSpValue("last_dismiss_time", System.currentTimeMillis(), "setting_pref")
         val current = _homePageFlow.value
         if (current is PageState.Success) {
             _homePageFlow.value = current.copy(info = current.info.copy(announcements = emptyList()))

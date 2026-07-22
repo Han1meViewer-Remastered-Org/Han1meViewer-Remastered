@@ -777,6 +777,10 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="more">もっと見る</string>
     <string name="announcement">お知らせ</string>
     <string name="announcement_list">お知らせ一覧</string>
+    <string name="no_announcement_available">お知らせはありません</string>
+    <string name="announcement_fetch_interval">お知らせ取得間隔</string>
+    <string name="announcement_fetch_interval_hours_format">%d 時間</string>
+    <string name="announcement_fetch_interval_off">取得しない（非推奨）</string>
     <string name="view_all">すべて表示</string>
     <string name="open_menu">メニューを開く</string>
     <string name="permission_permanently_denied_title">権限が恒久的に拒否されました</string>

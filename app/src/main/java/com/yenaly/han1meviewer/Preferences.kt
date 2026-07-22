@@ -107,6 +107,12 @@ object Preferences {
     val updatePopupIntervalDays
         get() = preferenceSp.getInt(SettingsPreferenceKeys.UPDATE_POPUP_INTERVAL_DAYS, 0)
 
+    /**
+     * 公告拉取间隔（小时）。0 表示不拉取公告，默认 6 小时。
+     */
+    val announcementFetchIntervalHours
+        get() = preferenceSp.getInt(SettingsPreferenceKeys.ANNOUNCEMENT_FETCH_INTERVAL_HOURS, 6)
+
     val useCIUpdateChannel
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_CI_UPDATE_CHANNEL, false)
 

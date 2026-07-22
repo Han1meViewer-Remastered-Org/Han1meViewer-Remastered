@@ -26,6 +26,7 @@ fun NavHostController.navigateDrawerDestination(
     when (destination) {
         MainDrawerDestination.Home -> navigateSafely(HomeRoute)
         MainDrawerDestination.Settings -> navigateSafely(HomeSettingsRoute)
+        MainDrawerDestination.Announcement -> Unit // 由 MainActivityContent 拦截处理，弹窗展示，不走导航
         MainDrawerDestination.DailyCheckIn -> navigateSafely(DailyCheckInRoute)
         MainDrawerDestination.WatchLater -> navigateSafely(MyWatchLaterRoute)
         MainDrawerDestination.FavVideo -> navigateSafely(MyFavVideoRoute)

@@ -17,6 +17,10 @@ enum class MainDrawerDestination(
         iconRes = R.drawable.ic_baseline_settings_24,
         titleRes = R.string.settings,
     ),
+    Announcement(
+        iconRes = R.drawable.ic_baseline_campaign_24,
+        titleRes = R.string.announcement,
+    ),
     DailyCheckIn(
         iconRes = R.drawable.ic_baseline_thumb_up_alt_24,
         titleRes = R.string.has_mastur,

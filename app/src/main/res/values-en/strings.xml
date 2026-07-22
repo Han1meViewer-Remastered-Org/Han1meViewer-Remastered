@@ -772,6 +772,10 @@ Recommendations are as follows:\n
     <string name="more">More</string>
     <string name="announcement">Announcement</string>
     <string name="announcement_list">Announcement List</string>
+    <string name="no_announcement_available">No announcements available</string>
+    <string name="announcement_fetch_interval">Announcement Fetch Interval</string>
+    <string name="announcement_fetch_interval_hours_format">%d hours</string>
+    <string name="announcement_fetch_interval_off">Off (not recommended)</string>
     <string name="view_all">View All</string>
     <string name="open_menu">Open menu</string>
     <string name="permission_permanently_denied_title">Permission permanently denied</string>

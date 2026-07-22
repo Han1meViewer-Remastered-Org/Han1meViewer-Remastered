@@ -148,6 +148,13 @@ internal fun toIntervalDaysPrettyString(context: Context, value: Int): String {
     } + "\n" + msg
 }
 
+internal fun announcementFetchIntervalLabel(context: Context, hours: Int): String =
+    if (hours <= 0) {
+        context.getString(R.string.announcement_fetch_interval_off)
+    } else {
+        context.getString(R.string.announcement_fetch_interval_hours_format, hours)
+    }
+
 internal fun toPrettySensitivityString(
     context: Context,
     @IntRange(from = 1, to = 9) value: Int

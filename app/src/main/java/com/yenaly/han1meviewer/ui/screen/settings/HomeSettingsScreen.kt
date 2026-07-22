@@ -40,6 +40,7 @@ private enum class HomeSettingsChoiceDialog {
     DarkMode,
     AppLanguage,
     ThemeColor,
+    AnnouncementFetchInterval,
 }
 
 @Composable
@@ -71,6 +72,7 @@ fun HomeSettingsScreen(
     onOpenAppLanguageSettings: (String) -> Unit,
     onCheckUpdate: () -> Unit,
     onUpdatePopupIntervalDaysChange: (Int) -> Unit,
+    onAnnouncementFetchIntervalHoursChange: (Int) -> Unit,
     onOpenApplyDeepLinks: () -> Unit,
     onOpenFakeLauncherIcon: () -> Unit,
     onOpenOpenSourceLicense: () -> Unit,
@@ -158,6 +160,24 @@ fun HomeSettingsScreen(
         onSelect = {
             activeDialog = null
             onThemeColorChange(it)
+        },
+    )
+
+    ChoiceDialog(
+        visible = activeDialog == HomeSettingsChoiceDialog.AnnouncementFetchInterval,
+        title = stringResource(R.string.announcement_fetch_interval),
+        options = listOf(
+            stringResource(R.string.announcement_fetch_interval_hours_format, 3) to "3",
+            stringResource(R.string.announcement_fetch_interval_hours_format, 6) to "6",
+            stringResource(R.string.announcement_fetch_interval_hours_format, 12) to "12",
+            stringResource(R.string.announcement_fetch_interval_hours_format, 23) to "23",
+            stringResource(R.string.announcement_fetch_interval_off) to "0",
+        ),
+        selectedValue = state.announcementFetchIntervalHours.toString(),
+        onDismiss = { activeDialog = null },
+        onSelect = {
+            activeDialog = null
+            onAnnouncementFetchIntervalHoursChange(it.toInt())
         },
     )
 
@@ -426,6 +446,16 @@ fun HomeSettingsScreen(
             )
         }
 
+        item { SettingsGroupTitle(stringResource(R.string.announcement)) }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.announcement_fetch_interval),
+                valueText = state.announcementFetchIntervalLabel,
+                iconRes = R.drawable.ic_baseline_campaign_24,
+                onClick = { activeDialog = HomeSettingsChoiceDialog.AnnouncementFetchInterval },
+            )
+        }
+
         item { SettingsGroupTitle(stringResource(R.string.privacy)) }
         item {
             SettingSwitchItem(
@@ -559,6 +589,8 @@ private fun HomeSettingsScreenPreview() {
                 versionSummary = "當前版本：v1.0.0",
                 updatePopupIntervalSummary = "7天\n最近還沒跳出過更新視窗哦",
                 updatePopupIntervalDays = 7,
+                announcementFetchIntervalHours = 6,
+                announcementFetchIntervalLabel = "6 小時",
                 dynamicColorEnabled = true,
                 themeColorKey = "default",
                 themeColorName = "預設（暖紅）",
@@ -597,6 +629,7 @@ private fun HomeSettingsScreenPreview() {
             onOpenAppLanguageSettings = {},
             onCheckUpdate = {},
             onUpdatePopupIntervalDaysChange = {},
+            onAnnouncementFetchIntervalHoursChange = {},
             onOpenApplyDeepLinks = {},
             onOpenFakeLauncherIcon = {},
             onOpenOpenSourceLicense = {},

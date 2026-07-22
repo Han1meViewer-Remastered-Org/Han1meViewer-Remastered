@@ -22,15 +22,18 @@ import androidx.navigation.compose.rememberNavController
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
+import com.yenaly.han1meviewer.logic.model.Announcement
 import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.component.UpdateDialog
 import com.yenaly.han1meviewer.ui.component.UsageNoticeDialog
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
+import com.yenaly.han1meviewer.ui.navigation.main.MainDrawerDestination
 import com.yenaly.han1meviewer.ui.navigation.main.MainNavHost
 import com.yenaly.han1meviewer.ui.navigation.main.handleMainIntent
 import com.yenaly.han1meviewer.ui.navigation.main.navigateDrawerDestination
+import com.yenaly.han1meviewer.ui.screen.home.homepage.component.AnnouncementListDialog
 import com.yenaly.han1meviewer.ui.theme.HanimeTheme
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomePageViewModel
@@ -63,6 +66,7 @@ fun MainActivityContent(
         var currentMainDestination by remember { mutableStateOf(MainDestinationSpec.Home) }
         var pendingUpdate by remember { mutableStateOf<Latest?>(null) }
         var showUsageNotice by remember { mutableStateOf(!Preferences.usageNoticeAccepted) }
+        var announcementDialogList by remember { mutableStateOf<List<Announcement>?>(null) }
         val isDrawerOpen =
             drawerState.currentValue == DrawerValue.Open || drawerState.targetValue == DrawerValue.Open
 
@@ -130,15 +134,28 @@ fun MainActivityContent(
             },
             onSwitchSiteClick = onSwitchSiteClick,
             onDrawerItemSelected = { destination ->
-                val handled = composeNavController.navigateDrawerDestination(
-                    destination = destination,
-                    isLoggedIn = isLoggedIn,
-                    onRequireLogin = { showShortToast(R.string.login_first) },
-                )
-                if (handled) {
+                if (destination == MainDrawerDestination.Announcement) {
                     scope.launch { drawerState.close() }
+                    scope.launch {
+                        val list = viewModel.fetchAnnouncementsForViewing()
+                        if (list.isEmpty()) {
+                            showShortToast(R.string.no_announcement_available)
+                        } else {
+                            announcementDialogList = list
+                        }
+                    }
+                    true
+                } else {
+                    val handled = composeNavController.navigateDrawerDestination(
+                        destination = destination,
+                        isLoggedIn = isLoggedIn,
+                        onRequireLogin = { showShortToast(R.string.login_first) },
+                    )
+                    if (handled) {
+                        scope.launch { drawerState.close() }
+                    }
+                    handled
                 }
-                handled
             },
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -191,6 +208,12 @@ fun MainActivityContent(
                     },
                     onDeclined = { activity.finish() },
                 )
+                announcementDialogList?.let { list ->
+                    AnnouncementListDialog(
+                        announcements = list,
+                        onDismiss = { announcementDialogList = null },
+                    )
+                }
             }
         }
     }

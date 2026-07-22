@@ -80,6 +80,7 @@ private const val HOME_DEFAULT_VIDEO_QUALITY = "default_video_quality"
 private const val HOME_SHOW_PLAYED_INDICATOR = "show_played_indicator"
 private const val HOME_ALLOW_PIP_MODE = "allow_pip_mode"
 private const val HOME_UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
+private const val HOME_ANNOUNCEMENT_FETCH_INTERVAL_HOURS = "announcement_fetch_interval_hours"
 private const val HOME_USE_CI_UPDATE_CHANNEL = "use_ci_update_channel"
 private const val HOME_USE_ANALYTICS = "use_analytics"
 private const val HOME_FAKE_LAUNCHER_ICON = "pref_fake_launcher_icon"
@@ -345,6 +346,10 @@ fun HomeSettingsRouteScreen(
             Preferences.preferenceSp.edit { putInt(HOME_UPDATE_POPUP_INTERVAL_DAYS, it) }
             refreshKey++
         },
+        onAnnouncementFetchIntervalHoursChange = { hours ->
+            Preferences.preferenceSp.edit { putInt(HOME_ANNOUNCEMENT_FETCH_INTERVAL_HOURS, hours) }
+            refreshKey++
+        },
         onOpenApplyDeepLinks = {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 showShortToast(R.string.action_app_open_by_default_settings_not_support)
@@ -605,6 +610,11 @@ private fun buildHomeSettingsUiState(
             Preferences.updatePopupIntervalDays
         ),
         updatePopupIntervalDays = Preferences.updatePopupIntervalDays,
+        announcementFetchIntervalHours = Preferences.announcementFetchIntervalHours,
+        announcementFetchIntervalLabel = announcementFetchIntervalLabel(
+            context,
+            Preferences.announcementFetchIntervalHours
+        ),
         dynamicColorEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
         themeColorKey = Preferences.themeColor ?: ThemeColorPreset.DEFAULT.key,
         themeColorName = context.getString(ThemeColorPreset.fromKey(Preferences.themeColor).displayNameRes),
