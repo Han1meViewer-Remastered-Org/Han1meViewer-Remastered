@@ -23,17 +23,21 @@
 
 ## 📌 当前同步状态
 
-本仓库当前版本仍然是 [原仓库](https://github.com/misaka10032w/Han1meViewer) 归档前最后一个发行版本对应的源码，尚未做任何功能性修改，仅调整了签名、包名和依赖镜像等构建层面的必要改动，以保证能够独立编译发布。
+本仓库已发布首个独立的功能维护版本 **v1.1.1**，版本号规则不再跟随原仓库，独立编号（当前发行 tag：`v1.1.1-remastered+26072212`）。相较于原样重新编译的早期版本，v1.1.x 起包含以下功能性改动：
 
-后续的维护和优化工作会围绕本 Remastered 版本的代码持续推进，包括但不限于适配、修复和功能改进，具体进展请关注本仓库的提交记录和 Release 页面。
+- 应用内"关于"页面改为可点击，展示独立的关于说明与鸣谢信息（含完整的上游 Fork 链路署名）。
+- 应用内检查更新功能修复（本地构建无 GitHub Token 时不再误发空 `Authorization` 头导致 401），并支持按发行 tag 中的 `+<versionCode>` 或语义化版本号回退比较。
+- 公告系统迁移出原作者的 Firebase 实时数据库（本仓库无写入权限），改为读取本仓库托管的 `announcements.json`（经 GitHub Contents API），并支持点击后跳转公告链接。
+- 修复视频详情页"评论"Tab 计数徽标与标题文字重叠的显示问题。
+- 针对鸿蒙（非 NEXT，3.2+）及老旧 Android/WebView 设备的 Cloudflare 验证做了增强：改进内置验证的完成检测（轮询 `cf_clearance` cookie），并新增"手动导入 Cookie + User-Agent"作为兜底通道。
+
+后续的维护和优化工作会持续围绕本 Remastered 版本的代码推进，具体进展请关注本仓库的提交记录和 [Release 页面](../../releases)。
 
 ## ⚠️ 包名、签名与遗留信息说明
 
 - 本仓库编译产物均使用独立包名（`com.han1meviewer.remastered`）和独立签名密钥签名，与原版应用互不冲突、可共存安装；这把签名密钥仅由本仓库维护，与原作者的签名无关。
-- 目前本仓库提供的 v1.0.0 及此前所有历史版本编译产物，源码层面尚未做功能性修改（见上方"当前同步状态"），因此：
-  - 应用内展示的开发者 / 关于信息，仍是原仓库作者的信息。
-  - 应用内置的公告功能，读取的仍是原仓库([misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer))所使用的公告数据源，与本仓库无关，本仓库不会也无法控制该数据源的内容。
-  - 以上两点会在后续更新中逐步迁移为本仓库独立维护的信息和数据源，但无论如何调整，都会保留对原作者的署名和贡献说明，不会抹去原作者信息。
+- 应用内展示的关于 / 鸣谢信息现为本仓库独立维护的内容，其中完整说明并链接了上游署名：本仓库直接 Fork 自 [misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer)，该项目又最初 Fork 自原作者 [YenalyLiew/Han1meViewer](https://github.com/YenalyLiew/Han1meViewer)。
+- 应用内置的公告功能现读取本仓库维护的 `announcements.json`，与原仓库无关；历史版本（v1.0.0 及更早重新编译版本）仍读取原仓库使用过的数据源，仅供兼容旧版本使用。
 
 ## 📥 下载
 
@@ -133,47 +137,32 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 - 🔐 账号能力：支持登录、手动录入 cookies、账号资料、头像裁剪、登录状态检测和退出登录。
 - 🎨 主题与设置：支持 Material 3 主题、动态颜色、首页布局、播放设置、MPV 设置、下载设置和网络设置。
 - 🕵️ 隐私保护：支持应用锁、启动器图标伪装和手动 Cookie 管理。
-- 🌐 网络辅助：支持 Cloudflare 处理、备用域名、代理相关设置、CDN/网络检测和更新检查。
+- 🌐 网络辅助：支持 Cloudflare 处理（内置验证轮询检测 + 手动导入 Cookie/UA 兜底，适配鸿蒙 3.2+/老旧 WebView 设备）、备用域名、代理相关设置、CDN/网络检测和更新检查。
 - 📅 健康打卡：内置冲了么打卡页面和桌面小组件。
 - 🎯 共享关键 H 帧：支持内置关键帧数据读取、设置和共享数据展示。
-- 🗞️ 公告系统：支持首页公告展示、公告详情弹窗，并配套 `HanimeAnnouncementManagerWebUI` 维护 Firebase Realtime Database 中的 `announcements` 节点。
+- 🗞️ 公告系统：支持首页公告展示、公告详情弹窗（含可跳转的操作链接），数据源为本仓库托管的 `announcements.json`。
 
 ## 🗞️ 公告系统使用须知
 
-公告系统分为两部分：
-
-- 用户侧：应用启动后由 `MainViewModel.loadAnnouncements()` 从 Firebase Realtime Database 读取 `announcements` 节点，首页会展示有效公告，并可点开公告详情弹窗。
-- 维护侧：`HanimeAnnouncementManagerWebUI` 用于维护公告数据，负责向同一个 `announcements` 节点写入、更新或下线公告。
-
-`HanimeAnnouncementManagerWebUI` 目录包含两个文件：
-
-- `HanimeAnnouncementManager.html`：公告管理网页，用于增删改查公告、切换启用状态。
-- `PermitAdmin.py`：给 Firebase Auth 用户写入 `isAdmin` 自定义声明，用于控制谁能访问管理端。
+公告数据由 `HomePageViewModel.fetchAnnouncements()` 通过 GitHub Contents API（`GET /repos/5APU-A340/Han1meViewer-Remastered/contents/announcements.json`，`Accept: application/vnd.github.raw`，见 `HGitHubService.getAnnouncements()`）匿名读取仓库根目录下的 `announcements.json`，而不是 `raw.githubusercontent.com`——后者在部分用户的网络/代理环境下不稳定，改用与"检查更新"相同的 `api.github.com` 通道更可靠。
 
 前置条件：
 
-- 应用必须能够正常访问网络。
-- 项目中配置的 Firebase Realtime Database 地址必须可用。
-- `announcements` 节点下的公告数据结构需要和 `Announcement` 模型一致，至少包含 `title`、`content`、`isActive` 等字段。
+- 应用必须能够正常访问网络（能访问 `api.github.com` 即可，无需 Firebase）。
+- `announcements.json` 需为一个 JSON 数组，每个元素结构对应 `AnnouncementDto`，至少包含 `title`、`content`、`isActive` 字段。
 - 公告内容会按 `priority` 排序，只有 `isActive = true` 的公告才会显示。
-- 管理端需要启用 Firebase Authentication 和 Realtime Database。
-- 管理端需要准备 Firebase Web 配置参数和可登录的管理员邮箱、密码。
-- 若使用 `PermitAdmin.py`，还需要 Firebase Admin SDK 的 `serviceAccountKey.json`。
 
 使用规则：
 
-- 首页公告默认会展示为有效公告列表。
+- 首页公告默认会展示为有效公告列表；仅当首页网络请求整体成功时才会拉取公告。
 - 用户关闭公告后，会记录 `last_dismiss_time`，24 小时内不会再次自动弹出。
-- 公告详情支持标题、内容、发布时间、图片和按钮文案。
-- 若公告配置了链接，内容中可直接展示可点击的 URL。
+- 公告详情支持标题、内容、发布时间、图片和按钮文案；若设置了 `actionUrl`，点击正向按钮会跳转到该链接。
 
-管理端使用步骤：
+维护步骤：
 
-1. 在 `HanimeAnnouncementManager.html` 中填写 `firebaseConfig`。
-2. 在 `ADMIN_EMAIL` 和 `ADMIN_PASSWORD` 中填入可登录 Firebase Auth 的管理员账号。
-3. 确保 Realtime Database 规则允许该管理员账号读写 `announcements` 节点。
-4. 如需批量授权管理员，先安装 `firebase-admin`，准备 `serviceAccountKey.json`，再运行 `PermitAdmin.py` 并填写目标用户 UID。
-5. 打开管理页后即可新增、编辑、启用、停用或删除公告。
+1. 直接编辑仓库根目录下的 [`announcements.json`](announcements.json)，新增或修改公告对象。
+2. 提交并推送到 `main` 分支即可生效（GitHub API 有少量缓存延迟，一般几分钟内更新）。
+3. 过期或不再需要显示的公告建议将 `isActive` 置为 `false` 下线，而不是直接删除，便于回溯。
 
 公告字段说明：
 
@@ -182,15 +171,10 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 - `imageUrl`：公告图片地址，可选。
 - `positiveText`：确认按钮文案，可选。
 - `negativeText`：取消按钮文案，可选。
-- `priority`：排序优先级。
+- `actionUrl`：点击确认按钮后跳转的链接，可选。
+- `priority`：排序优先级，数值越小越靠前。
 - `timestamp`：公告时间戳，单位为秒。
 - `isActive`：是否启用。
-
-维护建议：
-
-- 新公告建议先在 WebUI 中预览，再切换为 `isActive = true`。
-- 过期或不再需要显示的公告应直接下线，而不是删除，以便回溯。
-- 重要公告优先级数值应更高或更低需与 WebUI 约定保持一致，避免排序混乱。
 
 ## 📷 截图预览
 
@@ -220,7 +204,7 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 - `logic.network`：Retrofit Service、OkHttp 拦截器、DNS、CookieJar、更新服务和网络入口。
 - `logic.model`：页面和网络解析后的领域模型，如 `HanimeVideo`、`HanimeInfo`、`HomePage`、`Playlists` 等。
 - `logic.dao` / `logic.entity`：Room 数据库、DAO 和实体，用于历史、下载、搜索历史、关键帧、打卡等本地数据。
-- `announcement` 链路：公告数据从 Firebase Realtime Database 的 `announcements` 节点读取，首页通过 `MainViewModel.loadAnnouncements()` 拉取并展示，管理端使用 `HanimeAnnouncementManagerWebUI` 维护公告内容。
+- `announcement` 链路：公告数据从本仓库托管的 `announcements.json`（经 GitHub Contents API）读取，首页通过 `HomePageViewModel.fetchAnnouncements()` 拉取并展示。
 - `worker`：WorkManager 下载任务和更新任务。
 - `util`：主题、网络、文件、权限、Cookie、Toast、视频和通用工具方法。
 
@@ -256,7 +240,7 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 - WorkManager 后台任务
 - Coil 3 Compose 图片加载
 - Media3 ExoPlayer、JZVD、MPV Android
-- Firebase Analytics、Crashlytics、Performance、Remote Config、Realtime Database
+- Firebase Analytics、Crashlytics、Performance、Remote Config
 - AndroidX Window、Biometric、SplashScreen、Preference
 - AboutLibraries 开源许可展示
 
@@ -283,7 +267,7 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 1. 克隆项目：
 
    ```bash
-   git clone https://github.com/misaka10032w/Han1meViewer.git
+   git clone https://github.com/5APU-A340/Han1meViewer-Remastered.git
    ```
 
 2. 使用 Android Studio 打开项目根目录。
