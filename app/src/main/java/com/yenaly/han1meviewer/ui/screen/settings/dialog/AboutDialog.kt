@@ -112,8 +112,11 @@ fun AboutDialog(
                         text = stringResource(R.string.credits_content),
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    LinkButton(stringResource(R.string.credits_upstream_repo)) {
+                        context.browse("https://github.com/misaka10032w/Han1meViewer")
+                    }
                     LinkButton(stringResource(R.string.credits_original_repo)) {
-                        context.browse("https://github.com/Yenaly/Han1meViewer")
+                        context.browse("https://github.com/YenalyLiew/Han1meViewer")
                     }
 
                     Row(

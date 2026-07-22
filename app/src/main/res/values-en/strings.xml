@@ -886,8 +886,9 @@ Recommendations are as follows:\n
     <string name="about_remastered_desc">This is a community remastered maintenance build of Han1meViewer, with its own signing key and package name. It fixes issues left in the original and is actively maintained. Not affiliated with the original author or their services.</string>
     <string name="about_repo">GitHub Repository</string>
     <string name="credits">Credits</string>
-    <string name="credits_content">Thanks to the original author Yenaly Liew and all contributors; thanks to the community for exploring compatibility approaches (including the old-device verification ideas from Han1meViewer-Compat). This remastered build exists purely for maintenance and compatibility.</string>
-    <string name="credits_original_repo">Original project (Yenaly/Han1meViewer)</string>
+    <string name="credits_content">This remastered build is based on misaka10032w/Han1meViewer (its direct upstream), which was originally forked from the original author Yenaly Liew\'s YenalyLiew/Han1meViewer. Thanks to the original author and all upstream contributors. This build exists purely for maintenance and compatibility.</string>
+    <string name="credits_upstream_repo">Upstream project (misaka10032w/Han1meViewer)</string>
+    <string name="credits_original_repo">Original project (YenalyLiew/Han1meViewer)</string>
     <string name="cf_reload">Reload</string>
     <string name="cf_manual_import_entry">Import Cookie</string>
     <string name="cf_manual_import_title">Import Cloudflare Cookie Manually</string>

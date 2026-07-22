@@ -891,8 +891,9 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="about_remastered_desc">本アプリは Han1meViewer のコミュニティ・リマスター保守版です。独自の署名鍵とパッケージ名を使用し、原版の不具合を修正して継続的に保守しています。原作者およびそのサービスとは無関係です。</string>
     <string name="about_repo">GitHub リポジトリ</string>
     <string name="credits">クレジット</string>
-    <string name="credits_content">原プロジェクト作者 Yenaly Liew 氏および全ての貢献者に感謝します。また、互換性対応（Han1meViewer-Compat の旧端末認証手法を含む）を探究したコミュニティに感謝します。本リマスター版は保守と互換性向上のみを目的としています。</string>
-    <string name="credits_original_repo">オリジナルプロジェクト（Yenaly/Han1meViewer）</string>
+    <string name="credits_content">本リマスター版は misaka10032w/Han1meViewer（直接の上流）をベースにしています。同プロジェクトは原作者 Yenaly Liew 氏の YenalyLiew/Han1meViewer から Fork されたものです。原作者および各上流の貢献者に感謝します。本版は保守と互換性向上のみを目的としています。</string>
+    <string name="credits_upstream_repo">続編の原プロジェクト（misaka10032w/Han1meViewer）</string>
+    <string name="credits_original_repo">オリジナルプロジェクト（YenalyLiew/Han1meViewer）</string>
     <string name="cf_reload">再読み込み</string>
     <string name="cf_manual_import_entry">Cookie を取り込む</string>
     <string name="cf_manual_import_title">Cloudflare Cookie を手動で取り込む</string>
