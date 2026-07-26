@@ -1,5 +1,16 @@
 # 🔱 Han1meViewer-Remastered
 
+> ⚠️ **临时镜像仓库说明**
+>
+> 本仓库（`Han1meViewer-Remastered-Org/Han1meViewer-Remastered`）是**临时镜像**。主仓库 [`5APU-A340/Han1meViewer-Remastered`](https://github.com/5APU-A340/Han1meViewer-Remastered) 所属的 GitHub 账号 `5APU-A340` 目前被 GitHub 暂停（原因：短时间内使用官方 `gh` CLI 批量操作触发自动风控，正在申诉中），账号被暂停期间该仓库对所有人（包括仓库所有者本人）不可见，因此临时在维护者的另一个可用账号下创建本组织与本仓库，仅同步发布**最新版本**（v1.1.2）的源码与预编译产物，保证用户在此期间仍能获取最新版应用。
+>
+> - 本仓库不接受新的 Issue / PR，反馈请暂时留在主仓库（账号恢复后可见）或通过其他渠道联系维护者。
+> - 主账号 `5APU-A340` 申诉解封后，本仓库将：
+>   1. 归档（Archive）本仓库，停止更新；
+>   2. 将本仓库积累的 star 数、Issue 引导迁移/合并回主仓库（GitHub 不支持跨仓库自动合并 star/issue，届时会在主仓库和本仓库分别发公告说明具体操作方式，并尽量对本仓库的贡献者/关注者致谢）；
+>   3. 后续所有开发都会回到主仓库 `5APU-A340/Han1meViewer-Remastered` 进行。
+> - 如果你现在看到的是本仓库，建议以主仓库地址为准持续关注：https://github.com/5APU-A340/Han1meViewer-Remastered
+
 本仓库是 [misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer) 的社区续作。
 
 ## 为什么会有这个仓库
