@@ -140,7 +140,7 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 
 ## 💬 参与讨论
 
-Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
+原项目Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)，本重制版项目暂不设置任何讨论群组，若有需求或问题请在Issues中反馈。
 
 ## ✨ 功能概览
 
