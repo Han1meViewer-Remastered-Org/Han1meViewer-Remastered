@@ -8,7 +8,8 @@
     "priority": 0,
     "imageUrl": null,
     "isActive": true,
-    "actionUrl": "https://github.com/5APU-A340/Han1meViewer-Remastered"
+    "actionUrl": "https://github.com/5APU-A340/Han1meViewer-Remastered",
+    "origin": "primary"
   },
   {
     "title": "Han1meViewer 重制版 v1.1.0 发布",
@@ -19,6 +20,7 @@
     "priority": 1,
     "imageUrl": null,
     "isActive": true,
-    "actionUrl": "https://github.com/5APU-A340/Han1meViewer-Remastered"
+    "actionUrl": "https://github.com/5APU-A340/Han1meViewer-Remastered",
+    "origin": "primary"
   }
 ]

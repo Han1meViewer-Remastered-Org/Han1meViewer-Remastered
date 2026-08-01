@@ -23,11 +23,17 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
 import com.yenaly.han1meviewer.logic.model.Announcement
+import com.yenaly.han1meviewer.logic.model.Poll
 import com.yenaly.han1meviewer.logic.model.github.Latest
+import com.yenaly.han1meviewer.logic.network.PollRepository
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
+import com.yenaly.han1meviewer.ui.component.AnalyticsConsentDialog
+import com.yenaly.han1meviewer.ui.component.PollDialog
 import com.yenaly.han1meviewer.ui.component.UpdateDialog
 import com.yenaly.han1meviewer.ui.component.UsageNoticeDialog
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.analytics
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
 import com.yenaly.han1meviewer.ui.navigation.main.MainDrawerDestination
 import com.yenaly.han1meviewer.ui.navigation.main.MainNavHost
@@ -66,6 +72,10 @@ fun MainActivityContent(
         var currentMainDestination by remember { mutableStateOf(MainDestinationSpec.Home) }
         var pendingUpdate by remember { mutableStateOf<Latest?>(null) }
         var showUsageNotice by remember { mutableStateOf(!Preferences.usageNoticeAccepted) }
+        var analyticsConsentAnswered by remember { mutableStateOf(Preferences.analyticsConsentAsked) }
+        var pollToShow by remember { mutableStateOf<Poll?>(null) }
+        var pollSubmitting by remember { mutableStateOf(false) }
+        var pollFetched by remember { mutableStateOf(false) }
         var announcementDialogList by remember { mutableStateOf<List<Announcement>?>(null) }
         val isDrawerOpen =
             drawerState.currentValue == DrawerValue.Open || drawerState.targetValue == DrawerValue.Open
@@ -102,6 +112,13 @@ fun MainActivityContent(
         LaunchedEffect(viewModel) {
             viewModel.sessionExpiredMessage.collect { event ->
                 event.message?.let(::showShortToast) ?: showShortToast(event.fallbackResId)
+            }
+        }
+        LaunchedEffect(showUsageNotice, analyticsConsentAnswered) {
+            if (!showUsageNotice && analyticsConsentAnswered && !pollFetched) {
+                pollFetched = true
+                val polls = PollRepository.fetchActivePolls()
+                pollToShow = polls.firstOrNull { !Preferences.isPollSeen(it.id) }
             }
         }
         LaunchedEffect(homeState) {
@@ -208,6 +225,44 @@ fun MainActivityContent(
                     },
                     onDeclined = { activity.finish() },
                 )
+                AnalyticsConsentDialog(
+                    visible = !showUsageNotice && !analyticsConsentAnswered,
+                    onAgree = {
+                        Preferences.isAnalyticsEnabled = true
+                        Preferences.analyticsConsentAsked = true
+                        Firebase.analytics.setAnalyticsCollectionEnabled(true)
+                        analyticsConsentAnswered = true
+                    },
+                    onDecline = {
+                        Preferences.isAnalyticsEnabled = false
+                        Preferences.analyticsConsentAsked = true
+                        Firebase.analytics.setAnalyticsCollectionEnabled(false)
+                        analyticsConsentAnswered = true
+                    },
+                )
+                pollToShow?.let { poll ->
+                    PollDialog(
+                        poll = poll,
+                        isSubmitting = pollSubmitting,
+                        onSubmit = { optionId ->
+                            pollSubmitting = true
+                            scope.launch {
+                                val success = PollRepository.submitVote(poll.id, optionId)
+                                Preferences.markPollSeen(poll.id)
+                                pollSubmitting = false
+                                pollToShow = null
+                                showShortToast(
+                                    if (success) R.string.poll_vote_thanks
+                                    else R.string.poll_vote_failed
+                                )
+                            }
+                        },
+                        onDismiss = {
+                            Preferences.markPollSeen(poll.id)
+                            pollToShow = null
+                        },
+                    )
+                }
                 announcementDialogList?.let { list ->
                     AnnouncementListDialog(
                         announcements = list,

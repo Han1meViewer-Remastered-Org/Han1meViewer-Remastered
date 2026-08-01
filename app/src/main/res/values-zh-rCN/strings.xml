@@ -70,6 +70,10 @@
     <string name="about">关于</string>
     <string name="check_update">检查更新</string>
     <string name="new_version_found">已发现新版本</string>
+    <string name="update_from_backup_source">（此更新来自临时镜像仓库，主仓库账号恢复后将自动切回）</string>
+    <string name="poll_vote_thanks">感谢投票，你的选择已记录</string>
+    <string name="poll_vote_failed">投票提交失败，请稍后再试</string>
+    <string name="announcement_from_backup_source">（此公告来自临时镜像仓库，主仓库账号恢复后将自动切回）</string>
     <string name="checking_update">检查更新中…</string>
     <string name="update_content">更新内容</string>
     <string name="check_update_failed">检查更新失败，点击重试</string>
@@ -406,6 +410,7 @@
     <string name="privacy">隐私</string>
     <string name="about_analytics_summary">您同意让开发者收集您的设备信息与使用情况吗？这将对开发有很大帮助。&lt;br&gt;&lt;br&gt;数据统计服务由 Google Analytics for Firebase 提供，其隐私政策可在 &lt;a href=&quot;https://www.google.com/policies/privacy/&quot;&gt;https://www.google.com/policies/privacy/&lt;/a&gt; 查看。&lt;br&gt;&lt;br&gt;若您同意参与数据统计，您的设备信息与应用使用情况将会被记录，其包括但不限于：Android API 版本、设备型号、语言所在地、本应用版本号、会话时长、应用功能使用次数。开发者承诺以下信息并不会被记录：电话号码、电子邮件地址、IMEI。&lt;br&gt;&lt;br&gt;在您同意参与数据统计之前，您的信息不会被记录。&lt;br&gt;&lt;br&gt;被记录的数据会由 Google Analytics for Firebase 进行分析，分析报表仅可被本应用开发者访问。</string>
     <string name="about_analytics">关于使用情况统计</string>
+    <string name="analytics_consent_agree">同意并开启</string>
     <string name="refresh_page_or_login_expired">刷新一下页面试试\n也可能登入已过期</string>
     <string name="website_blocked_msg_2">网站被加固，修改为另外一个域名可能有奇效！</string>
     <string name="website_blocked_msg_3">可以提醒一下开发者，但不要催，网站被加固跟他没有任何关系哦～</string>

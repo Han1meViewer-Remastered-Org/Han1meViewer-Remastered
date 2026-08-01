@@ -62,19 +62,35 @@ object HUpdater {
                     return Latest("$shortSha (CI)", changelog, archiveUrl, nodeId)
                 }
             } else {
-                val ver = HanimeNetwork.githubService.getLatestVersion()
-                val isNeeded = checkNeedUpdate(ver.tagName)
-                if (isNeeded) {
-                    val asset = ver.pickBestApkAsset() ?: return null
-                    return Latest(
-                        ver.tagName, ver.body,
-                        asset.browserDownloadURL,
-                        asset.nodeID
-                    )
-                }
+                return checkForUpdateViaReleases()
             }
         }
         return null
+    }
+
+    /**
+     * ⚠️ 临时应急逻辑：优先查主仓库最新发行版，主仓库不可达（账号被暂停期间通常直接
+     * 请求失败）时才查临时镜像仓库。每次调用都从主仓库开始尝试，不缓存"上次哪个源可用"，
+     * 主账号一旦恢复，下一次检测即可自动优先命中主仓库。
+     * 主账号恢复、临时仓库归档后，应移除 catch 分支与 [HanimeNetwork.githubServiceBackup]。
+     */
+    private suspend fun checkForUpdateViaReleases(): Latest? {
+        val ver = runSuspendCatching {
+            HanimeNetwork.githubService.getLatestVersion() to Latest.SOURCE_PRIMARY
+        }.getOrNull() ?: runSuspendCatching {
+            HanimeNetwork.githubServiceBackup.getLatestVersion() to Latest.SOURCE_BACKUP
+        }.getOrNull() ?: return null
+
+        val (release, source) = ver
+        val isNeeded = checkNeedUpdate(release.tagName)
+        if (!isNeeded) return null
+        val asset = release.pickBestApkAsset() ?: return null
+        return Latest(
+            release.tagName, release.body,
+            asset.browserDownloadURL,
+            asset.nodeID,
+            source,
+        )
     }
 
     /**

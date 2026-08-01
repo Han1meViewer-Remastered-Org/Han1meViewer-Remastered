@@ -1,0 +1,13 @@
+[
+  {
+    "id": "roadmap-2026-08-example",
+    "title": "示例投票：下个版本你最想要哪个新功能？",
+    "description": "这是一条示例投票，isActive 为 false 不会展示给用户。复制这个结构、改内容、把 isActive 改成 true 即可发起真实投票；投票 id 每次发起新投票都要换一个新的，不要复用旧 id。",
+    "options": [
+      { "id": "a", "text": "示例选项 A" },
+      { "id": "b", "text": "示例选项 B" },
+      { "id": "c", "text": "示例选项 C" }
+    ],
+    "isActive": false
+  }
+]

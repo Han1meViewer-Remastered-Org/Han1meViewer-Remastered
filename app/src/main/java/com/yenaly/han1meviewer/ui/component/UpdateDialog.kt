@@ -52,10 +52,17 @@ fun UpdateDialog(
 ) {
     val updateContentLabel = stringResource(R.string.update_content)
     val linkColor = MaterialTheme.colorScheme.primary
-    val changelog = remember(latest, linkColor) {
+    val backupSourceHint = stringResource(R.string.update_from_backup_source)
+    val changelog = remember(latest, linkColor, backupSourceHint) {
         buildAnnotatedString {
             withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp)) {
                 append(latest.version)
+            }
+            if (latest.source == Latest.SOURCE_BACKUP) {
+                append("\n")
+                withStyle(SpanStyle(color = linkColor, fontSize = 13.sp)) {
+                    append(backupSourceHint)
+                }
             }
             append("\n\n")
             withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {

@@ -28,10 +28,15 @@ data class Announcement(
     @JvmField val imageUrl: String ? = null,
     @JvmField val isActive: Boolean = false,
     /** 正向按钮点击后要打开的链接（如仓库地址）；为空则仅关闭弹窗。 */
-    @JvmField val actionUrl: String ? = null
+    @JvmField val actionUrl: String ? = null,
+    /**
+     * ⚠️ 临时应急字段：这条公告来自主仓库（"primary"）还是临时镜像仓库（"backup"）。
+     * 主账号恢复、临时仓库归档后可移除。
+     */
+    @JvmField val origin: String ? = null,
 ) {
     //firebase初始化需要一个空的构造函数
-    constructor() : this("", "", null, null, 0L, 1, null, false, null)
+    constructor() : this("", "", null, null, 0L, 1, null, false, null, null)
     @OptIn(ExperimentalTime::class)
     fun getFormattedDate(): String {
         return kotlin.time.Instant

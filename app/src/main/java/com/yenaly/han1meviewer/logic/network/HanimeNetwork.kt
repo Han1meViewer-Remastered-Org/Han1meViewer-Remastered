@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.logic.network
 
 import com.yenaly.han1meviewer.GETCHU_BASE_URL
+import com.yenaly.han1meviewer.HA1_GITHUB_API_URL_BACKUP
 import com.yenaly.han1meviewer.HANIME_BASE_URL
 import com.yenaly.han1meviewer.logic.network.service.HGitHubService
 import com.yenaly.han1meviewer.logic.network.service.GetchuService
@@ -19,6 +20,12 @@ object HanimeNetwork {
         private set
     var githubService = _githubService
         private set
+
+    /**
+     * ⚠️ 临时应急源，见 [HA1_GITHUB_API_URL_BACKUP]。
+     */
+    var githubServiceBackup = _githubServiceBackup
+        private set
     var getchuService = _getchuService
         private set
     var commentService = _commentService
@@ -33,6 +40,9 @@ object HanimeNetwork {
 
     private val _githubService
         get() = ServiceCreator.createGitHubApi<HGitHubService>()
+
+    private val _githubServiceBackup
+        get() = ServiceCreator.createGitHubApi<HGitHubService>(HA1_GITHUB_API_URL_BACKUP)
 
     private val _getchuService
         get() = ServiceCreator.createGetchu<GetchuService>(GETCHU_BASE_URL)

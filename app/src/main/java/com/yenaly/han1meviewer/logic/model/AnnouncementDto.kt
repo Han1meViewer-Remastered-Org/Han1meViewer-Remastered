@@ -18,6 +18,11 @@ data class AnnouncementDto(
     val imageUrl: String? = null,
     val isActive: Boolean = false,
     val actionUrl: String? = null,
+    /**
+     * ⚠️ 临时应急字段：标注这条公告来自主仓库（"primary"）还是临时镜像仓库（"backup"）的
+     * announcements.json，由两边仓库各自的文件手动维护。主账号恢复、临时仓库归档后可移除。
+     */
+    val origin: String? = null,
 ) {
     fun toAnnouncement(): Announcement = Announcement(
         title = title,
@@ -29,5 +34,6 @@ data class AnnouncementDto(
         imageUrl = imageUrl,
         isActive = isActive,
         actionUrl = actionUrl,
+        origin = origin,
     )
 }

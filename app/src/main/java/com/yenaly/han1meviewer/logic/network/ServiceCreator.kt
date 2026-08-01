@@ -45,8 +45,8 @@ object ServiceCreator {
         .build()
         .create(T::class.java)
 
-    inline fun <reified T> createGitHubApi(): T = Retrofit.Builder()
-        .baseUrl(HA1_GITHUB_API_URL)
+    inline fun <reified T> createGitHubApi(baseUrl: String = HA1_GITHUB_API_URL): T = Retrofit.Builder()
+        .baseUrl(baseUrl)
         .client(githubClient)
         .addConverterFactory(HJson.asConverterFactory("application/json".toMediaType()))
         .build()

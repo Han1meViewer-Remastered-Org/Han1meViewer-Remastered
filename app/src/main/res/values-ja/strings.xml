@@ -70,6 +70,10 @@
     <string name="about">アプリについて</string>
     <string name="check_update">更新確認</string>
     <string name="new_version_found">新しいバージョンが見つかりました</string>
+    <string name="update_from_backup_source">（この更新は一時ミラーリポジトリからのものです。メインアカウントが復旧すれば自動的に切り替わります）</string>
+    <string name="poll_vote_thanks">投票ありがとうございます。あなたの選択は記録されました</string>
+    <string name="poll_vote_failed">投票の送信に失敗しました。後でもう一度お試しください</string>
+    <string name="announcement_from_backup_source">（このお知らせは一時ミラーリポジトリからのものです。メインアカウントが復旧すれば自動的に切り替わります）</string>
     <string name="checking_update">更新確認中…</string>
     <string name="update_content">更新内容</string>
     <string name="check_update_failed">更新確認失敗、タップして再試行</string>
@@ -410,6 +414,7 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="privacy">プライバシー</string>
     <string name="about_analytics_summary">開発者による端末情報と利用状況の収集に同意しますか？開発に大きく役立ちます。&lt;br&gt;&lt;br&gt;データ統計サービスは Google Analytics for Firebase により提供、プライバシーポリシーは &lt;a href=&quot;https://www.google.com/policies/privacy/&quot;&gt;https://www.google.com/policies/privacy/&lt;/a&gt; で確認可。&lt;br&gt;&lt;br&gt;データ統計に参加同意すると、端末情報とアプリ利用状況が記録されます。これには以下が含まれます（ただしこれらに限定されません）：Android APIバージョン、端末モデル、言語地域、アプリバージョン、セッション時間、アプリ機能使用回数。開発者は以下の情報が記録されないことを約束：電話番号、メールアドレス、IMEI。&lt;br&gt;&lt;br&gt;データ統計参加同意前は、情報は記録されません。&lt;br&gt;&lt;br&gt;記録されたデータは Google Analytics for Firebase により分析され、分析レポートは本アプリ開発者のみがアクセス可。</string>
     <string name="about_analytics">利用状況統計について</string>
+    <string name="analytics_consent_agree">同意して有効にする</string>
     <string name="refresh_page_or_login_expired">ページを再読み込みしてみて\nログイン期限切れの可能性も</string>
     <string name="website_blocked_msg_2">サイトが強化された、別のドメインに変更すると効果があるかも！</string>
     <string name="website_blocked_msg_3">開発者に通知可、ただし急かさないで。サイト強化は開発者とは関係ありません～</string>

@@ -77,6 +77,13 @@ const val HA1_GITHUB_RELEASES_URL = "$HA1_GITHUB_URL/releases"
 const val HA1_GITHUB_API_URL = "https://api.github.com/repos/5APU-A340/Han1meViewer-Remastered/"
 
 /**
+ * ⚠️ 临时应急源：主账号 5APU-A340 被 GitHub 暂停期间，检查更新与公告拉取的兜底仓库。
+ * 主账号恢复且临时仓库归档后应移除本常量及相关 fallback 逻辑。
+ */
+const val HA1_GITHUB_API_URL_BACKUP =
+    "https://api.github.com/repos/Han1meViewer-Remastered-Org/Han1meViewer-Remastered/"
+
+/**
  * 重制版自托管公告源（仓库根目录的 announcements.json，通过 raw CDN 拉取）。
  * 维护者提交/修改该文件即可发布或下架公告，无需 Firebase 写入权限。
  */

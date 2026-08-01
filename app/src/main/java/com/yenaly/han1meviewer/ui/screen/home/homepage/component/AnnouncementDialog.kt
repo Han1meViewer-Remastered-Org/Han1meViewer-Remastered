@@ -107,6 +107,15 @@ fun AnnouncementDialog(
                         Spacer(Modifier.height(16.dp))
                     }
 
+                    if (announcementData.origin == "backup") {
+                        Text(
+                            text = stringResource(R.string.announcement_from_backup_source),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
+
                     Text(
                         text = announcementData.getFormatedContent(),
                         style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant),

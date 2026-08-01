@@ -108,22 +108,31 @@ class HomePageViewModel: ViewModel() {
     /**
      * 实际向 GitHub Contents API 请求 announcements.json，不受拉取间隔限制。
      * 返回 null 代表请求/解析失败，交给调用方决定是否重置节流计时。
+     *
+     * ⚠️ 临时应急逻辑：优先查主仓库的 announcements.json，失败了才查临时镜像仓库的。
+     * 每次调用都从主仓库开始尝试，主账号一旦恢复即可自动优先命中。
+     * 主账号恢复、临时仓库归档后，应移除对 [HanimeNetwork.githubServiceBackup] 的回退。
      */
     private suspend fun fetchAnnouncementsFromNetwork(): List<Announcement>? =
         withContext(Dispatchers.IO) {
-            runCatching {
-                val response = HanimeNetwork.githubService.getAnnouncements()
-                if (!response.isSuccessful) return@runCatching null
-                val body = response.body()?.string().orEmpty()
-                HJson.decodeFromString<List<AnnouncementDto>>(body)
-                    .filter { it.isActive }
-                    .sortedBy { it.priority }
-                    .map { it.toAnnouncement() }
-            }.getOrElse { e ->
-                Log.e("Announcement", "读取失败: ${e.message}")
-                null
-            }
+            fetchAnnouncementsFrom(HanimeNetwork.githubService)
+                ?: fetchAnnouncementsFrom(HanimeNetwork.githubServiceBackup)
         }
+
+    private suspend fun fetchAnnouncementsFrom(
+        service: com.yenaly.han1meviewer.logic.network.service.HGitHubService,
+    ): List<Announcement>? = runCatching {
+        val response = service.getAnnouncements()
+        if (!response.isSuccessful) return@runCatching null
+        val body = response.body()?.string().orEmpty()
+        HJson.decodeFromString<List<AnnouncementDto>>(body)
+            .filter { it.isActive }
+            .sortedBy { it.priority }
+            .map { it.toAnnouncement() }
+    }.getOrElse { e ->
+        Log.e("Announcement", "读取失败: ${e.message}")
+        null
+    }
 
     /**
      * 首页自动加载调用，按 [Preferences.announcementFetchIntervalHours] 节流：

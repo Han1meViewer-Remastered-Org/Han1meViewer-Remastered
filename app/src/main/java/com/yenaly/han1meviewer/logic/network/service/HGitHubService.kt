@@ -35,6 +35,13 @@ interface HGitHubService {
     suspend fun getAnnouncements(): Response<ResponseBody>
 
     /**
+     * 通过 GitHub Contents API 获取仓库根目录的 polls.json（开发路线投票配置）原文。
+     */
+    @Headers("Accept: application/vnd.github.raw")
+    @GET("contents/polls.json")
+    suspend fun getPolls(): Response<ResponseBody>
+
+    /**
      * What is Workflow Runs?
      *
      * List all workflow runs for a repository. You can use parameters to filter the list of results. For example, you

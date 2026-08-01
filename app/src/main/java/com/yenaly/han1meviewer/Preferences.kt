@@ -22,6 +22,9 @@ import kotlin.time.ExperimentalTime
 
 object Preferences {
     private const val USAGE_NOTICE_ACCEPTED = "usage_notice_accepted"
+    private const val ANALYTICS_CONSENT_ASKED = "analytics_consent_asked"
+    private const val POLL_DEVICE_ID = "poll_device_id"
+    private const val SEEN_POLL_IDS = "seen_poll_ids"
 
     /**
      * [Preference][androidx.preference.PreferenceFragmentCompat]自帶的SP
@@ -48,6 +51,36 @@ object Preferences {
     var usageNoticeAccepted: Boolean
         get() = preferenceSp.getBoolean(USAGE_NOTICE_ACCEPTED, false)
         set(value) = preferenceSp.edit { putBoolean(USAGE_NOTICE_ACCEPTED, value) }
+
+    /**
+     * 是否已经向用户展示过首次启动的统计授权弹窗。
+     */
+    var analyticsConsentAsked: Boolean
+        get() = preferenceSp.getBoolean(ANALYTICS_CONSENT_ASKED, false)
+        set(value) = preferenceSp.edit { putBoolean(ANALYTICS_CONSENT_ASKED, value) }
+
+    /**
+     * 用于投票去重的匿名随机设备标识（非 IMEI/广告 ID 等真实设备标识，纯随机生成，
+     * 首次使用时生成并持久化）。
+     */
+    val pollDeviceId: String
+        get() {
+            preferenceSp.getString(POLL_DEVICE_ID, null)?.let { return it }
+            val generated = java.util.UUID.randomUUID().toString()
+            preferenceSp.edit { putString(POLL_DEVICE_ID, generated) }
+            return generated
+        }
+
+    /**
+     * 某个投票是否已经展示/处理过（投过票或关闭过弹窗都算），确保每次投票推送只弹一次。
+     */
+    fun isPollSeen(pollId: String): Boolean =
+        preferenceSp.getStringSet(SEEN_POLL_IDS, emptySet())?.contains(pollId) == true
+
+    fun markPollSeen(pollId: String) {
+        val current = preferenceSp.getStringSet(SEEN_POLL_IDS, emptySet()).orEmpty()
+        preferenceSp.edit { putStringSet(SEEN_POLL_IDS, current + pollId) }
+    }
 
     val savedUserId: String
         get() = preferenceSp.getString(SAVED_USER_ID,"") ?: ""
@@ -317,8 +350,11 @@ object Preferences {
 
     // 隐私 相關
 
-    val isAnalyticsEnabled: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_ANALYTICS, true)
+    // 默认关闭，需用户在首次启动的授权弹窗或设置中主动同意后才会开启，
+    // 避免在用户明确同意前上报数据。
+    var isAnalyticsEnabled: Boolean
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_ANALYTICS, false)
+        set(value) = preferenceSp.edit { putBoolean(SettingsPreferenceKeys.USE_ANALYTICS, value) }
 
     // 下载 相關
 
