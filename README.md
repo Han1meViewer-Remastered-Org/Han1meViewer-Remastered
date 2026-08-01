@@ -191,13 +191,11 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 
 ## 📷 截图预览
 
-![readme0](readme_01.png) ![readme1](readme_02.png)
+不提供截图预览。
 
-![readme2](readme_03.png) ![readme3](readme_04.png)
+## 📈 Star 趋势
 
-![readme4](readme_05.png) ![readme5](readme_06.png)
-
-![readme6](readme_07.png)
+[![Star History Chart](https://api.star-history.com/svg?repos=Han1meViewer-Remastered-Org/Han1meViewer-Remastered&type=Date)](https://star-history.com/#Han1meViewer-Remastered-Org/Han1meViewer-Remastered&Date)
 
 ## 🧱 当前架构
 
