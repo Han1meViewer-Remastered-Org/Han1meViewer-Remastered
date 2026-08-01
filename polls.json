@@ -1,13 +1,25 @@
 [
   {
-    "id": "roadmap-2026-08-example",
-    "title": "示例投票：下个版本你最想要哪个新功能？",
-    "description": "这是一条示例投票，isActive 为 false 不会展示给用户。复制这个结构、改内容、把 isActive 改成 true 即可发起真实投票；投票 id 每次发起新投票都要换一个新的，不要复用旧 id。",
+    "id": "update-frequency-2026-08",
+    "title": "你希望本重制版以怎样的频率更新？",
+    "description": "帮我了解大家的期待，安排后续维护节奏。",
     "options": [
-      { "id": "a", "text": "示例选项 A" },
-      { "id": "b", "text": "示例选项 B" },
-      { "id": "c", "text": "示例选项 C" }
+      { "id": "weekly", "text": "每周：修复快、追新快，但版本可能不够稳定" },
+      { "id": "monthly", "text": "每月：修复与新功能定期攒一批发布，节奏适中" },
+      { "id": "quarterly", "text": "数月一次：攒够改动量再发，最稳定但要等得久" }
     ],
-    "isActive": false
+    "isActive": true
+  },
+  {
+    "id": "update-direction-2026-08",
+    "title": "接下来你最希望优先投入精力在哪个方向？",
+    "description": "可以只选一个当前最在意的方向，帮我排优先级。",
+    "options": [
+      { "id": "stability", "text": "修 Bug、提升稳定性与设备兼容性" },
+      { "id": "existing-ux", "text": "优化现有功能体验（播放器、下载、界面等）" },
+      { "id": "new-features", "text": "开发新功能" },
+      { "id": "network", "text": "网络/访问相关增强（Cloudflare 验证、镜像域名等）" }
+    ],
+    "isActive": true
   }
 ]

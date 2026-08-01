@@ -73,6 +73,7 @@ fun MainActivityContent(
         var pendingUpdate by remember { mutableStateOf<Latest?>(null) }
         var showUsageNotice by remember { mutableStateOf(!Preferences.usageNoticeAccepted) }
         var analyticsConsentAnswered by remember { mutableStateOf(Preferences.analyticsConsentAsked) }
+        var pollQueue by remember { mutableStateOf<List<Poll>>(emptyList()) }
         var pollToShow by remember { mutableStateOf<Poll?>(null) }
         var pollSubmitting by remember { mutableStateOf(false) }
         var pollFetched by remember { mutableStateOf(false) }
@@ -117,8 +118,8 @@ fun MainActivityContent(
         LaunchedEffect(showUsageNotice, analyticsConsentAnswered) {
             if (!showUsageNotice && analyticsConsentAnswered && !pollFetched) {
                 pollFetched = true
-                val polls = PollRepository.fetchActivePolls()
-                pollToShow = polls.firstOrNull { !Preferences.isPollSeen(it.id) }
+                pollQueue = PollRepository.fetchActivePolls()
+                pollToShow = pollQueue.firstOrNull { !Preferences.isPollSeen(it.id) }
             }
         }
         LaunchedEffect(homeState) {
@@ -250,7 +251,7 @@ fun MainActivityContent(
                                 val success = PollRepository.submitVote(poll.id, optionId)
                                 Preferences.markPollSeen(poll.id)
                                 pollSubmitting = false
-                                pollToShow = null
+                                pollToShow = pollQueue.firstOrNull { !Preferences.isPollSeen(it.id) }
                                 showShortToast(
                                     if (success) R.string.poll_vote_thanks
                                     else R.string.poll_vote_failed
@@ -259,7 +260,7 @@ fun MainActivityContent(
                         },
                         onDismiss = {
                             Preferences.markPollSeen(poll.id)
-                            pollToShow = null
+                            pollToShow = pollQueue.firstOrNull { !Preferences.isPollSeen(it.id) }
                         },
                     )
                 }
