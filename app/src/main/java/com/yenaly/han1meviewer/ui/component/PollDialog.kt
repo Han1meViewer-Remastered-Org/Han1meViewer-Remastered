@@ -1,14 +1,19 @@
 package com.yenaly.han1meviewer.ui.component
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,7 +50,7 @@ fun PollDialog(
                 modifier = Modifier
                     .heightIn(max = 420.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (poll.description.isNotBlank()) {
                     Text(
@@ -55,8 +60,8 @@ fun PollDialog(
                     )
                 }
                 poll.options.forEach { option: PollOption ->
-                    SettingChoiceItem(
-                        title = option.text,
+                    PollOptionRow(
+                        text = option.text,
                         selected = selectedOptionId == option.id,
                         onClick = { selectedOptionId = option.id },
                     )
@@ -81,6 +86,47 @@ fun PollDialog(
             }
         },
     )
+}
+
+/**
+ * 带边框的投票选项行：未选中为 outlineVariant 细边框 + surface 底色，
+ * 选中态边框加粗并变为 primary 色，底色带一层浅浅的 primary 容器色，与应用 Material 3 主题呼应。
+ */
+@Composable
+private fun PollOptionRow(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.outlineVariant
+        },
+        label = "pollOptionBorderColor",
+    )
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        label = "pollOptionContainerColor",
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = containerColor,
+        border = BorderStroke(if (selected) 1.5.dp else 1.dp, borderColor),
+    ) {
+        SettingChoiceItem(
+            title = text,
+            selected = selected,
+            onClick = onClick,
+        )
+    }
 }
 
 @Preview(showBackground = true, showSystemUi = true)
