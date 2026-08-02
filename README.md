@@ -230,7 +230,13 @@ v1.1.3 起新增的功能。投票配置与公告一样走 GitHub Contents API �
 
 ## 📈 Star 趋势
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Han1meViewer-Remastered-Org/Han1meViewer-Remastered&type=Date)](https://star-history.com/#Han1meViewer-Remastered-Org/Han1meViewer-Remastered&Date)
+<a href="https://www.star-history.com/?repos=Han1meViewer-Remastered-Org%2FHan1meViewer-Remastered&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Han1meViewer-Remastered-Org/Han1meViewer-Remastered&type=date&theme=dark&legend=top-left&sealed_token=LYqGGR__6aLYhUZje2CyrJ2PSbCDTwykI8GeEnwI-xZrYE4R2YY3UAl-ku43dUjeSw6eJsNW_VEO8GgZQx9FM6-jS5X25bNHRzcrKn9Lj-CeYra0g23r9E6nSUI-41ya1EeYvrDcUlkCArtpKgJC-AaHkDe0UqSGCCkWXva9oJfQo_yQtyaGt-mS16r6" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Han1meViewer-Remastered-Org/Han1meViewer-Remastered&type=date&legend=top-left&sealed_token=LYqGGR__6aLYhUZje2CyrJ2PSbCDTwykI8GeEnwI-xZrYE4R2YY3UAl-ku43dUjeSw6eJsNW_VEO8GgZQx9FM6-jS5X25bNHRzcrKn9Lj-CeYra0g23r9E6nSUI-41ya1EeYvrDcUlkCArtpKgJC-AaHkDe0UqSGCCkWXva9oJfQo_yQtyaGt-mS16r6" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Han1meViewer-Remastered-Org/Han1meViewer-Remastered&type=date&legend=top-left&sealed_token=LYqGGR__6aLYhUZje2CyrJ2PSbCDTwykI8GeEnwI-xZrYE4R2YY3UAl-ku43dUjeSw6eJsNW_VEO8GgZQx9FM6-jS5X25bNHRzcrKn9Lj-CeYra0g23r9E6nSUI-41ya1EeYvrDcUlkCArtpKgJC-AaHkDe0UqSGCCkWXva9oJfQo_yQtyaGt-mS16r6" />
+ </picture>
+</a>
 
 ## 🧱 当前架构
 
