@@ -62,5 +62,8 @@ object HanimeNetwork {
         getchuService = _getchuService
         commentService = _commentService
         myListService = _myListService
+        subscriptionService = _subscriptionService
+        githubService = _githubService
+        githubServiceBackup = _githubServiceBackup
     }
 }

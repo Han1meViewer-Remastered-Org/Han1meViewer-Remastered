@@ -74,6 +74,7 @@ fun CloudflareManualImportDialog(
                     label = { Text(stringResource(R.string.cf_manual_cookie_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    isError = cookieText.isNotBlank() && !isValidCloudflareCookieInput(cookieText),
                     supportingText = { Text(stringResource(R.string.cf_manual_cookie_hint)) },
                 )
                 OutlinedButton(
@@ -113,7 +114,7 @@ fun CloudflareManualImportDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = cookieText.isNotBlank(),
+                enabled = isValidCloudflareCookieInput(cookieText),
                 onClick = { onConfirm(cookieText.trim(), uaText.trim()) },
             ) {
                 Text(stringResource(R.string.confirm))
@@ -135,4 +136,15 @@ fun CloudflareManualImportDialog(
 fun normalizeCloudflareCookieInput(input: String): String {
     val trimmed = input.trim()
     return if (trimmed.contains("cf_clearance=")) trimmed else "cf_clearance=$trimmed"
+}
+
+/**
+ * 校验规整后的 cookie 串是否带有非空的 cf_clearance 值，避免用户粘贴了空白/
+ * 不相关内容也能"成功"保存，之后照样被拒却毫无线索指向问题所在。
+ */
+fun isValidCloudflareCookieInput(input: String): Boolean {
+    if (input.isBlank()) return false
+    val normalized = normalizeCloudflareCookieInput(input)
+    val value = normalized.substringAfter("cf_clearance=").substringBefore(";").trim()
+    return value.isNotEmpty()
 }

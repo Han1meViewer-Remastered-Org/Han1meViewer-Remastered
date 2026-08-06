@@ -75,13 +75,10 @@ object HUpdater {
      * 主账号恢复、临时仓库归档后，应移除 catch 分支与 [HanimeNetwork.githubServiceBackup]。
      */
     private suspend fun checkForUpdateViaReleases(): Latest? {
-        val ver = runSuspendCatching {
-            HanimeNetwork.githubService.getLatestVersion() to Latest.SOURCE_PRIMARY
-        }.getOrNull() ?: runSuspendCatching {
-            HanimeNetwork.githubServiceBackup.getLatestVersion() to Latest.SOURCE_BACKUP
-        }.getOrNull() ?: return null
+        val ver = withGithubFallback { it.getLatestVersion() } ?: return null
 
-        val (release, source) = ver
+        val (release, isPrimary) = ver
+        val source = if (isPrimary) Latest.SOURCE_PRIMARY else Latest.SOURCE_BACKUP
         val isNeeded = checkNeedUpdate(release.tagName)
         if (!isNeeded) return null
         val asset = release.pickBestApkAsset() ?: return null

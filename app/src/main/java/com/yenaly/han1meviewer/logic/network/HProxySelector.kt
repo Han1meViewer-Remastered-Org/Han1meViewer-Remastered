@@ -94,6 +94,6 @@ class HProxySelector : ProxySelector() {
     }
 
     override fun connectFailed(uri: URI?, sa: SocketAddress?, ioe: IOException?) {
-        delegation?.select(uri)
+        delegation?.connectFailed(uri, sa, ioe)
     }
 }

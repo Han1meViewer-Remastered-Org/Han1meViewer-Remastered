@@ -25,6 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
 import com.yenaly.han1meviewer.HANIME_LOGIN_URL
 import com.yenaly.han1meviewer.HanimeConstants.HANIME_URL
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.USER_AGENT
 import com.yenaly.han1meviewer.logic.NetworkRepo
@@ -105,7 +106,7 @@ class LoginActivity : FrameActivity() {
             CookieManager.getInstance().flush()
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            settings.userAgentString = USER_AGENT
+            settings.userAgentString = Preferences.effectiveUserAgent
 
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String) {

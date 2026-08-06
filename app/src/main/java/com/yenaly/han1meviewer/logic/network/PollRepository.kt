@@ -28,9 +28,7 @@ object PollRepository {
      * [HanimeNetwork.githubServiceBackup] 的回退。
      */
     suspend fun fetchActivePolls(): List<Poll> =
-        fetchPollsFrom(HanimeNetwork.githubService)
-            ?: fetchPollsFrom(HanimeNetwork.githubServiceBackup)
-            ?: emptyList()
+        withGithubFallback { service -> fetchPollsFrom(service) }?.first ?: emptyList()
 
     private suspend fun fetchPollsFrom(service: HGitHubService): List<Poll>? = runCatching {
         val response = service.getPolls()

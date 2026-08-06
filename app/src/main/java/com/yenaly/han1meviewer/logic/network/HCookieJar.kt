@@ -22,7 +22,7 @@ class HCookieJar : CookieJar {
 
     companion object {
         @JvmStatic
-        val cookieMap: MutableMap<String, MutableList<Cookie>> = mutableMapOf()
+        val cookieMap: MutableMap<String, MutableList<Cookie>> = java.util.concurrent.ConcurrentHashMap()
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {

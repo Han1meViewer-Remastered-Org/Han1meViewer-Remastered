@@ -578,7 +578,7 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
                     put("http-proxy", "http://$proxyUrl")
                 }
             }
-            put("user-agent", USER_AGENT)
+            put("user-agent", Preferences.effectiveUserAgent)
         }
 
 
