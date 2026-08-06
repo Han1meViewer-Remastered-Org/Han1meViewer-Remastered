@@ -76,7 +76,7 @@
 
 🔞 R18 警告：未满 18 岁禁止下载和使用。
 
-Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览、搜索、播放和管理 hanime 相关公开视频页面内容。当前项目以 Jetpack Compose、Navigation Compose、ViewModel、StateFlow、Retrofit、Jsoup、Room、WorkManager、Media3/JZVD/MPV 为主要技术栈，围绕视频浏览、详情播放、搜索、用户列表、下载管理、评论、订阅、设置和隐私保护等功能组织。
+Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览、搜索、播放和管理 hanime 相关公开视频页面内容，围绕视频浏览、详情播放、搜索、用户列表、下载管理、评论、订阅、设置和隐私保护等功能组织。技术架构、构建方式和贡献指南见 [README_TECH.md](README_TECH.md)。
 
 本应用没有任何官方网站。GitHub Release 与 CI 构建产物是唯一下载及更新渠道。
 
@@ -149,39 +149,7 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 - 🎯 共享关键 H 帧：支持内置关键帧数据读取、设置和共享数据展示。
 - 🗞️ 公告系统：支持首页公告展示、公告详情弹窗（含可跳转的操作链接），数据源为本仓库托管的 `announcements.json`。
 
-## 🗞️ 公告系统使用须知
-
-公告数据由 `HomePageViewModel.fetchAnnouncements()` 通过 GitHub Contents API（`GET /repos/5APU-A340/Han1meViewer-Remastered/contents/announcements.json`，`Accept: application/vnd.github.raw`，见 `HGitHubService.getAnnouncements()`）匿名读取仓库根目录下的 `announcements.json`，而不是 `raw.githubusercontent.com`——后者在部分用户的网络/代理环境下不稳定，改用与"检查更新"相同的 `api.github.com` 通道更可靠。
-
-前置条件：
-
-- 应用必须能够正常访问网络（能访问 `api.github.com` 即可，无需 Firebase）。
-- `announcements.json` 需为一个 JSON 数组，每个元素结构对应 `AnnouncementDto`，至少包含 `title`、`content`、`isActive` 字段。
-- 公告内容会按 `priority` 排序，只有 `isActive = true` 的公告才会显示。
-
-使用规则：
-
-- 首页公告默认会展示为有效公告列表；仅当首页网络请求整体成功时才会拉取公告。
-- 用户关闭公告后，会记录 `last_dismiss_time`，24 小时内不会再次自动弹出。
-- 公告详情支持标题、内容、发布时间、图片和按钮文案；若设置了 `actionUrl`，点击正向按钮会跳转到该链接。
-
-维护步骤：
-
-1. 直接编辑仓库根目录下的 [`announcements.json`](announcements.json)，新增或修改公告对象。
-2. 提交并推送到 `main` 分支即可生效（GitHub API 有少量缓存延迟，一般几分钟内更新）。
-3. 过期或不再需要显示的公告建议将 `isActive` 置为 `false` 下线，而不是直接删除，便于回溯。
-
-公告字段说明：
-
-- `title`：公告标题。
-- `content`：公告正文。
-- `imageUrl`：公告图片地址，可选。
-- `positiveText`：确认按钮文案，可选。
-- `negativeText`：取消按钮文案，可选。
-- `actionUrl`：点击确认按钮后跳转的链接，可选。
-- `priority`：排序优先级，数值越小越靠前。
-- `timestamp`：公告时间戳，单位为秒。
-- `isActive`：是否启用。
+首页公告默认会自动拉取展示，用户关闭后 24 小时内不会再自动弹出；随时可通过左侧菜单的"公告"入口手动查看当前有效公告。公告数据维护方式和字段说明见 [README_TECH.md 第 13 节](README_TECH.md#13-公告系统与管理端)。
 
 ## 📷 截图预览
 
@@ -193,154 +161,9 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 
 ![readme6](readme_07.png)
 
-## 🧱 当前架构
+## 🤝 参与贡献
 
-📦 项目采用多模块 Gradle 结构：
-
-- `:app`：主应用模块，包含界面、导航、业务 ViewModel、网络解析、数据库、下载 Worker、播放器和资源文件。
-- `:yenaly_libs`：项目内公共基础库，封装通用 Activity、Fragment、ViewModel、偏好设置、工具类和基础组件。
-- `buildSrc`：构建配置辅助代码，用于版本号、构建类型和提交信息等 Gradle 逻辑。
-
-🗂️ 主应用采用分层组织：
-
-- `ui.activity`：入口 Activity、登录、Cloudflare 处理和手动 Cookie 输入页面。
-- `ui.navigation`：Navigation Compose 路由定义、主导航、设置导航和安全跳转封装。
-- `ui.screen`：Compose 页面实现，按首页、搜索、视频、设置、账号、下载等业务域划分。
-- `ui.component`：可复用 Compose 组件，如视频卡片、弹窗、空/错/加载状态、AppBar、评论卡片等。
-- `ui.viewmodel`：页面状态和业务动作入口，主要通过 `StateFlow` / `SharedFlow` 对 UI 暴露状态。
-- `logic.network`：Retrofit Service、OkHttp 拦截器、DNS、CookieJar、更新服务和网络入口。
-- `logic.model`：页面和网络解析后的领域模型，如 `HanimeVideo`、`HanimeInfo`、`HomePage`、`Playlists` 等。
-- `logic.dao` / `logic.entity`：Room 数据库、DAO 和实体，用于历史、下载、搜索历史、关键帧、打卡等本地数据。
-- `announcement` 链路：公告数据从本仓库托管的 `announcements.json`（经 GitHub Contents API）读取，首页通过 `HomePageViewModel.fetchAnnouncements()` 拉取并展示。
-- `worker`：WorkManager 下载任务和更新任务。
-- `util`：主题、网络、文件、权限、Cookie、Toast、视频和通用工具方法。
-
-🔁 整体数据流：
-
-```text
-Compose Screen -> ViewModel -> NetworkRepo / DatabaseRepo -> Retrofit + Jsoup / Room -> StateFlow -> Compose Screen
-```
-
-🎞️ 视频页数据流：
-
-```text
-VideoRoute -> VideoViewModel -> NetworkRepo.getHanimeVideo -> Parser -> HanimeVideo -> VideoScreen / Player / CommentScreen
-```
-
-📥 下载数据流：
-
-```text
-DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Worker -> Room -> Flow -> UI
-```
-
-## 🛠️ 技术栈
-
-- Kotlin 2.3.x
-- Java 21 toolchain
-- Android Gradle Plugin 9.2.x
-- Jetpack Compose + Material 3
-- Navigation Compose + Kotlin Serialization typed routes
-- ViewModel + StateFlow + SharedFlow
-- Retrofit 3 + kotlinx.serialization converter
-- Jsoup HTML 解析
-- Room + KSP
-- WorkManager 后台任务
-- Coil 3 Compose 图片加载
-- Media3 ExoPlayer、JZVD、MPV Android
-- Firebase Analytics、Crashlytics、Performance、Remote Config
-- AndroidX Window、Biometric、SplashScreen、Preference
-- AboutLibraries 开源许可展示
-
-## 🧰 构建环境
-
-✅ 推荐环境：
-
-- Android Studio Panda 或更新版本。
-- JDK 21。
-- Gradle Wrapper 使用仓库内置版本。
-- 编译 SDK：`37`。
-- 最低支持：Android 8.1，API `27`。
-- 目标 SDK：`37`。
-
-📌 关键版本以仓库文件为准：
-
-- `gradle.properties`
-- `gradle/libs.versions.toml`
-- `app/build.gradle.kts`
-- `buildSrc/src/main/java/Config.kt`
-
-## 🚀 本地运行
-
-1. 克隆项目：
-
-   ```bash
-   git clone https://github.com/5APU-A340/Han1meViewer-Remastered.git
-   ```
-
-2. 使用 Android Studio 打开项目根目录。
-
-3. 等待 Gradle Sync 完成。
-
-4. 选择 `debug` 变体运行到设备或模拟器。
-
-💻 常用命令：
-
-```bash
-./gradlew :app:compileDebugKotlin
-./gradlew :app:assembleDebug
-```
-
-🪟 Windows PowerShell：
-
-```powershell
-.\gradlew.bat :app:compileDebugKotlin
-.\gradlew.bat :app:assembleDebug
-```
-
-🔏 Release 构建需要本地或 CI 提供签名相关环境变量：
-
-- `KEYSTORE_PASSWORD`
-- `KEY_ALIAS`
-
-🔑 GitHub API Token 可通过环境变量或本地文件提供：
-
-- 环境变量：`HA_GITHUB_TOKEN`
-- 本地文件：`app/ha1_github_token.txt`
-
-## ✅ 代码约定
-
-- UI 优先使用 Jetpack Compose，少量历史页面和组件仍保留 XML / ViewBinding / DataBinding。
-- 页面状态通过 `StateFlow` 暴露，事件通过 `SharedFlow` 或回调传递。
-- 网络页面列表追加时应按稳定业务键去重，避免 Compose `Lazy*` 列表 key 冲突。
-- `LazyColumn`、`LazyVerticalGrid`、`LazyRow` 使用稳定 key 时应确保数据源唯一。
-
-## 🗺️ 目录速查
-
-```text
-Han1meViewer/
-├── app/                         主 Android 应用
-│   ├── src/main/java/.../logic   网络、解析、模型、数据库、状态
-│   ├── src/main/java/.../ui      Activity、Compose 页面、导航、组件、ViewModel
-│   ├── src/main/java/.../util    通用工具
-│   ├── src/main/java/.../worker  WorkManager 任务
-│   └── src/main/res              资源文件、主题、布局、图标、小组件
-├── yenaly_libs/                  项目内公共库
-├── buildSrc/                     Gradle 构建辅助代码
-├── gradle/libs.versions.toml     依赖版本目录
-├── README.md                     项目说明
-└── README_TECH.md                历史技术说明与部分实现笔记
-```
-
-## 🤝 贡献说明
-
-- 提交代码前请先确认可以通过 `:app:compileDebugKotlin`。
-- 修改网络列表、分页或 Compose `Lazy*` 列表时，请检查重复 key 风险。
-- 修改播放、下载、账号、Cookie、Cloudflare、更新逻辑时，请尽量说明验证方式。
-- 提交共享关键 H 帧可参考 `.github/PULL_REQUEST_TEMPLATE/submit_h_keyframe.md`。
-
-## 🧩 TODO
-
-- 随时有想法随时写。
+欢迎提交 Issue 和 PR。项目架构、技术栈、构建环境、本地运行步骤和代码约定见 [README_TECH.md](README_TECH.md)。
 
 ## 📄 许可证
 
