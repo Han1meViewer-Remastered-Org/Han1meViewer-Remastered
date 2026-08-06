@@ -30,6 +30,9 @@ object SharedHKeyframesRoute
 @Serializable
 object HKeyframeSettingsRoute
 
+@Serializable
+object DiagnosticsRoute
+
 enum class SettingsDestinationSpec(
     val routeKey: String,
     val titleRes: Int,
@@ -84,6 +87,12 @@ enum class SettingsDestinationSpec(
         titleRes = R.string.h_keyframe_settings,
         screenClassName = "HKeyframeSettingsScreen",
         routeClass = HKeyframeSettingsRoute::class,
+    ),
+    Diagnostics(
+        routeKey = "diagnostics",
+        titleRes = R.string.diagnostics_info,
+        screenClassName = "DiagnosticsScreen",
+        routeClass = DiagnosticsRoute::class,
     );
 
     val route: Any
@@ -96,6 +105,7 @@ enum class SettingsDestinationSpec(
             HKeyframes -> HKeyframesRoute
             SharedHKeyframes -> SharedHKeyframesRoute
             HKeyframeSettings -> HKeyframeSettingsRoute
+            Diagnostics -> DiagnosticsRoute
         }
 
     companion object {

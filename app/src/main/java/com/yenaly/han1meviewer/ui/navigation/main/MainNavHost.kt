@@ -23,6 +23,8 @@ import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.screen.account.AvatarCropScreen
 import com.yenaly.han1meviewer.ui.screen.home.CreatorCenterScreen
+import com.yenaly.han1meviewer.ui.navigation.settings.DiagnosticsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.DiagnosticsRouteScreen
 import com.yenaly.han1meviewer.ui.navigation.settings.DownloadSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.DownloadSettingsRouteScreen
 import com.yenaly.han1meviewer.ui.navigation.settings.HKeyframeSettingsRoute
@@ -206,6 +208,7 @@ fun MainNavHost(
                     onNavigateToHKeyframeSettings = { navController.navigateSafely(HKeyframeSettingsRoute) },
                     onNavigateToDownloadSettings = { navController.navigateSafely(DownloadSettingsRoute) },
                     onNavigateToNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
+                    onNavigateToDiagnostics = { navController.navigateSafely(DiagnosticsRoute) },
                 )
             }
         }
@@ -233,6 +236,14 @@ fun MainNavHost(
                 fallbackDestination = HomeSettingsRoute,
             ) {
                 DownloadSettingsRouteScreen(activity = activity)
+            }
+        }
+        composable<DiagnosticsRoute> {
+            SettingsScaffold(
+                navController = navController,
+                fallbackDestination = HomeSettingsRoute,
+            ) {
+                DiagnosticsRouteScreen()
             }
         }
         composable<MpvPlayerSettingsRoute> {

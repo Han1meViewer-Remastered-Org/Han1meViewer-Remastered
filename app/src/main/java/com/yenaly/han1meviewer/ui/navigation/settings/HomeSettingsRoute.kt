@@ -78,6 +78,10 @@ import kotlinx.coroutines.withContext
 private const val HOME_VIDEO_LANGUAGE = "video_language"
 private const val HOME_DEFAULT_VIDEO_QUALITY = "default_video_quality"
 private const val HOME_SHOW_PLAYED_INDICATOR = "show_played_indicator"
+private const val HOME_SHOW_DATE_AND_VIEWS_IN_CARD = "show_date_and_views_in_card"
+private const val HOME_SHOW_PLAYFUL_SEARCH_HINT = "show_playful_search_hint"
+private const val HOME_SHOW_WATCH_HISTORY_SEARCH = "show_watch_history_search"
+private const val HOME_SHOW_MY_LIST_SEARCH = "show_my_list_search"
 private const val HOME_ALLOW_PIP_MODE = "allow_pip_mode"
 private const val HOME_UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
 private const val HOME_ANNOUNCEMENT_FETCH_INTERVAL_HOURS = "announcement_fetch_interval_hours"
@@ -112,6 +116,7 @@ fun HomeSettingsRouteScreen(
     onNavigateToHKeyframeSettings: () -> Unit,
     onNavigateToDownloadSettings: () -> Unit,
     onNavigateToNetworkSettings: () -> Unit,
+    onNavigateToDiagnostics: () -> Unit,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -245,6 +250,22 @@ fun HomeSettingsRouteScreen(
             saveBoolean(HOME_SHOW_PLAYED_INDICATOR, it)
             refreshKey++
         },
+        onShowDateAndViewsInCardChange = {
+            saveBoolean(HOME_SHOW_DATE_AND_VIEWS_IN_CARD, it)
+            refreshKey++
+        },
+        onShowPlayfulSearchHintChange = {
+            saveBoolean(HOME_SHOW_PLAYFUL_SEARCH_HINT, it)
+            refreshKey++
+        },
+        onShowWatchHistorySearchChange = {
+            saveBoolean(HOME_SHOW_WATCH_HISTORY_SEARCH, it)
+            refreshKey++
+        },
+        onShowMyListSearchChange = {
+            saveBoolean(HOME_SHOW_MY_LIST_SEARCH, it)
+            refreshKey++
+        },
         onSearchArtistIgnoreVideoTypeChange = {
             saveBoolean(HOME_SEARCH_ARTIST_IGNORE_VIDEO_TYPE, it)
             refreshKey++
@@ -326,6 +347,7 @@ fun HomeSettingsRouteScreen(
         onOpenHKeyframeSettings = onNavigateToHKeyframeSettings,
         onOpenDownloadSettings = onNavigateToDownloadSettings,
         onOpenNetworkSettings = onNavigateToNetworkSettings,
+        onOpenDiagnostics = onNavigateToDiagnostics,
         onOpenAppLanguageSettings = { value ->
             val old = Preferences.preferenceSp.getString(HOME_APP_LANGUAGE, "system") ?: "system"
             if (old != value) {
@@ -588,6 +610,10 @@ private fun buildHomeSettingsUiState(
         allowPipMode = Preferences.preferenceSp.getBoolean(HOME_ALLOW_PIP_MODE, false),
         allowResumePlayback = Preferences.allowResumePlayback,
         showPlayedIndicator = Preferences.showPlayedIndicator,
+        showDateAndViewsInCard = Preferences.showDateAndViewsInCard,
+        showPlayfulSearchHint = Preferences.showPlayfulSearchHint,
+        showWatchHistorySearch = Preferences.showWatchHistorySearch,
+        showMyListSearch = Preferences.showMyListSearch,
         searchArtistIgnoreVideoType = Preferences.searchArtistIgnoreVideoType,
         disableMobileDataWarning = Preferences.disableMobileDataWarning,
         disablePredictiveBack = Preferences.disablePredictiveBack,

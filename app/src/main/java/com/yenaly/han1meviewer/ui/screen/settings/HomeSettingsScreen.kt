@@ -52,6 +52,10 @@ fun HomeSettingsScreen(
     onAllowPipModeChange: (Boolean) -> Unit,
     onAllowResumePlaybackChange: (Boolean) -> Unit,
     onShowPlayedIndicatorChange: (Boolean) -> Unit,
+    onShowDateAndViewsInCardChange: (Boolean) -> Unit,
+    onShowPlayfulSearchHintChange: (Boolean) -> Unit,
+    onShowWatchHistorySearchChange: (Boolean) -> Unit,
+    onShowMyListSearchChange: (Boolean) -> Unit,
     onSearchArtistIgnoreVideoTypeChange: (Boolean) -> Unit,
     onDisableMobileDataWarningChange: (Boolean) -> Unit,
     onDisablePredictiveBackChange: (Boolean) -> Unit,
@@ -69,6 +73,7 @@ fun HomeSettingsScreen(
     onOpenHKeyframeSettings: () -> Unit,
     onOpenDownloadSettings: () -> Unit,
     onOpenNetworkSettings: () -> Unit,
+    onOpenDiagnostics: () -> Unit,
     onOpenAppLanguageSettings: (String) -> Unit,
     onCheckUpdate: () -> Unit,
     onUpdatePopupIntervalDaysChange: (Int) -> Unit,
@@ -261,6 +266,42 @@ fun HomeSettingsScreen(
                 checked = state.showPlayedIndicator,
                 iconRes = R.drawable.ic_baseline_history_24,
                 onCheckedChange = onShowPlayedIndicatorChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.show_date_and_views_in_card),
+                summary = stringResource(R.string.show_date_and_views_in_card_summary),
+                checked = state.showDateAndViewsInCard,
+                iconRes = R.drawable.ic_baseline_calendar_today_24,
+                onCheckedChange = onShowDateAndViewsInCardChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.show_playful_search_hint),
+                summary = stringResource(R.string.show_playful_search_hint_summary),
+                checked = state.showPlayfulSearchHint,
+                iconRes = R.drawable.ic_baseline_search_24,
+                onCheckedChange = onShowPlayfulSearchHintChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.show_watch_history_search),
+                summary = stringResource(R.string.show_watch_history_search_summary),
+                checked = state.showWatchHistorySearch,
+                iconRes = R.drawable.ic_baseline_search_24,
+                onCheckedChange = onShowWatchHistorySearchChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.show_my_list_search),
+                summary = stringResource(R.string.show_my_list_search_summary),
+                checked = state.showMyListSearch,
+                iconRes = R.drawable.ic_baseline_search_24,
+                onCheckedChange = onShowMyListSearchChange,
             )
         }
         item {
@@ -512,6 +553,14 @@ fun HomeSettingsScreen(
         }
         item {
             SettingNavigationItem(
+                title = stringResource(R.string.diagnostics_info),
+                summary = stringResource(R.string.diagnostics_info_summary),
+                iconRes = R.drawable.ic_baseline_report_24,
+                onClick = onOpenDiagnostics,
+            )
+        }
+        item {
+            SettingNavigationItem(
                 title = stringResource(R.string.submit_bug),
                 summary = stringResource(R.string.submit_bug_summary),
                 iconRes = R.drawable.baseline_bug_report_24,
@@ -573,6 +622,10 @@ private fun HomeSettingsScreenPreview() {
                 allowPipMode = true,
                 allowResumePlayback = true,
                 showPlayedIndicator = true,
+                showDateAndViewsInCard = true,
+                showPlayfulSearchHint = true,
+                showWatchHistorySearch = true,
+                showMyListSearch = true,
                 searchArtistIgnoreVideoType = false,
                 disableMobileDataWarning = false,
                 disablePredictiveBack = false,
@@ -609,6 +662,10 @@ private fun HomeSettingsScreenPreview() {
             onAllowPipModeChange = {},
             onAllowResumePlaybackChange = {},
             onShowPlayedIndicatorChange = {},
+            onShowDateAndViewsInCardChange = {},
+            onShowPlayfulSearchHintChange = {},
+            onShowWatchHistorySearchChange = {},
+            onShowMyListSearchChange = {},
             onSearchArtistIgnoreVideoTypeChange = {},
             onDisableMobileDataWarningChange = {},
             onDisablePredictiveBackChange = {},
@@ -626,6 +683,7 @@ private fun HomeSettingsScreenPreview() {
             onOpenHKeyframeSettings = {},
             onOpenDownloadSettings = {},
             onOpenNetworkSettings = {},
+            onOpenDiagnostics = {},
             onOpenAppLanguageSettings = {},
             onCheckUpdate = {},
             onUpdatePopupIntervalDaysChange = {},
