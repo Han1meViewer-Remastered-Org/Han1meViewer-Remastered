@@ -1,6 +1,12 @@
 package com.yenaly.han1meviewer
 
 import android.content.SharedPreferences
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.preference.PreferenceManager
@@ -33,6 +39,34 @@ object Preferences {
         get() = PreferenceManager.getDefaultSharedPreferences(
             applicationContext
         )
+
+    /**
+     * 以 Compose State 形式读取布尔类型偏好设置，并在设置变化时自动触发重组。
+     *
+     * 直接在 Composable 里读 `preferenceSp.getBoolean(...)` 只在首次组合时取值一次，
+     * 用户在设置页切换开关后，已经在返回栈里的页面感知不到变化，
+     * 必须退出重进才会生效。这个函数注册了 [SharedPreferences.OnSharedPreferenceChangeListener]，
+     * 对应 key 变化时会更新内部 State 并触发重组。
+     *
+     * @param key 对应 [SettingsPreferenceKeys] 里的 SharedPreferences key
+     * @param defaultValue 该 key 不存在时的默认值
+     */
+    @Composable
+    fun rememberBooleanPreference(key: String, defaultValue: Boolean): Boolean {
+        var value by remember(key) {
+            mutableStateOf(preferenceSp.getBoolean(key, defaultValue))
+        }
+        DisposableEffect(key) {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { sp, changedKey ->
+                if (changedKey == key) {
+                    value = sp.getBoolean(key, defaultValue)
+                }
+            }
+            preferenceSp.registerOnSharedPreferenceChangeListener(listener)
+            onDispose { preferenceSp.unregisterOnSharedPreferenceChangeListener(listener) }
+        }
+        return value
+    }
 
     // app 相關
 
@@ -199,6 +233,31 @@ object Preferences {
 
     val showPlayedIndicator: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_PLAYED_INDICATOR,true)
+
+    /**
+     * 是否在视频卡片（首页网格、系列影片列表等）上显示发行日期与播放量。默认开启。
+     */
+    val showDateAndViewsInCard: Boolean
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true)
+
+    /**
+     * 首页搜索框是否显示随机的"个性文字"提示语（如"滴！学生卡/老司机卡，请刷卡搜索！"）。
+     * 关闭后改为显示固定的普通提示语。默认开启。
+     */
+    val showPlayfulSearchHint: Boolean
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_PLAYFUL_SEARCH_HINT, true)
+
+    /**
+     * 观看历史页面是否显示搜索框。默认开启。
+     */
+    val showWatchHistorySearch: Boolean
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_WATCH_HISTORY_SEARCH, true)
+
+    /**
+     * 收藏/播放清单等列表页面是否显示搜索框。默认开启。
+     */
+    val showMyListSearch: Boolean
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_MY_LIST_SEARCH, true)
 
     val searchGridColumnsConfig: SearchGridColumnsConfig
         get() = SearchGridColumnsConfig(

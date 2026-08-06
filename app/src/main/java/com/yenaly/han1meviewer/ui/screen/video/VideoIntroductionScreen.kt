@@ -77,6 +77,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ResolutionLinkMap
 import com.yenaly.han1meviewer.logic.entity.CheckInRecordEntity
@@ -725,6 +727,9 @@ private fun PlaylistBottomSheet(
             LaunchedEffect(playingIndex) {
                 listState.scrollToItem(playingIndex)
             }
+            val showDateAndViews = Preferences.rememberBooleanPreference(
+                SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+            )
 
             LazyColumn(
                 state = listState,
@@ -785,6 +790,52 @@ private fun PlaylistBottomSheet(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            if (showDateAndViews &&
+                                (!item.uploadTime.isNullOrEmpty() || !item.views.isNullOrEmpty())
+                            ) {
+                                val metaColor = if (item.isPlaying) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    modifier = Modifier.padding(top = 2.dp),
+                                ) {
+                                    item.uploadTime?.takeIf { it.isNotEmpty() }?.let {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_baseline_calendar_today_24),
+                                            contentDescription = null,
+                                            tint = metaColor,
+                                            modifier = Modifier.size(12.dp),
+                                        )
+                                        Text(
+                                            text = DisplayTextLocalizer.localizeRelativeTime(it),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = metaColor,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                    item.views?.takeIf { it.isNotEmpty() }?.let {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_baseline_play_circle_outline_24),
+                                            contentDescription = null,
+                                            tint = metaColor,
+                                            modifier = Modifier.size(12.dp),
+                                        )
+                                        Text(
+                                            text = DisplayTextLocalizer.localizeViews(it),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = metaColor,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                            }
                         }
                         if (item.isPlaying) {
                             Text(
@@ -1224,6 +1275,9 @@ private fun PlaylistSection(
             onActionClick = onShowAllPlaylist,
         )
         val (cardWidth, _) = rememberCardResponsiveWidth()
+        val showDateAndViews = Preferences.rememberBooleanPreference(
+            SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+        )
         LazyRow(
             state = listState,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1235,6 +1289,7 @@ private fun PlaylistSection(
                     videoItem = item,
                     isHorizontalCard = item.itemType == HanimeInfo.NORMAL,
                     isPlaying = item.isPlaying,
+                    showDateAndViews = showDateAndViews,
                     onClickVideosItem = { onOpenVideo(item) },
                     onLongClickVideosItem = { _, _ -> },
                 )
@@ -1261,6 +1316,9 @@ internal fun RelatedVideosSection(
             val spacing = SpacingNormal
             val columns = maxOf(2, ((maxWidth + spacing) / (minCardWidth + spacing)).toInt())
             val itemWidth = ((maxWidth - (spacing * (columns - 1))) / columns) - 0.5.dp
+            val showDateAndViews = Preferences.rememberBooleanPreference(
+                SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+            )
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 maxItemsInEachRow = columns,
@@ -1272,6 +1330,7 @@ internal fun RelatedVideosSection(
                         modifier = Modifier.width(itemWidth),
                         videoItem = item,
                         isHorizontalCard = item.itemType == HanimeInfo.NORMAL,
+                        showDateAndViews = showDateAndViews,
                         onClickVideosItem = { onOpenVideo(item) },
                         onLongClickVideosItem = { _, _ -> },
                     )

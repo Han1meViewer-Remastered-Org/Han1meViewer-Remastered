@@ -22,6 +22,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import com.yenaly.han1meviewer.ui.theme.VideoNormalCardMinWidth
@@ -103,8 +104,9 @@ fun rememberVideoGridColumns(): Int {
     val screenWidthDp = with(density) { screenWidthPx.toDp() }
 
     val isPreview = LocalInspectionMode.current
+    val tabletMode = Preferences.rememberBooleanPreference(SettingsPreferenceKeys.TABLET_MODE, false)
 
-    return if (!isPreview && Preferences.tabletMode) {
+    return if (!isPreview && tabletMode) {
         Preferences.searchGridColumnsConfig.columnsForWidthDp(screenWidthDp.value.toInt())
     } else {
         maxOf(2, ((screenWidthDp + SpacingNormal) / (VideoNormalCardMinWidth + SpacingNormal)).toInt())

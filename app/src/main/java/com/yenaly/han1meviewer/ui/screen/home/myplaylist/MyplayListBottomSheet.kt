@@ -51,8 +51,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.BottomSheetHandler
@@ -328,6 +330,9 @@ private fun PlaylistSheetContent(
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val columns = maxOf(2, (maxWidth / VideoNormalCardMinWidth).toInt())
+            val showDateAndViews = Preferences.rememberBooleanPreference(
+                SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+            )
 
             LazyVerticalGrid(
                 state = gridState,
@@ -340,6 +345,7 @@ private fun PlaylistSheetContent(
                     VideoCardItem(
                         videoItem = item,
                         isHorizontalCard = true,
+                        showDateAndViews = showDateAndViews,
                         onClickVideosItem = onClickItem
                     ) { videoCode, _ ->
                         showDeleteItemConfirm = Triple(listCode, videoCode, index)

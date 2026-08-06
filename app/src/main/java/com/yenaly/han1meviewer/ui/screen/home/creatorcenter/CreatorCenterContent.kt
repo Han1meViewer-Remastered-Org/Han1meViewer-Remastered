@@ -24,7 +24,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.logic.model.CreatorTab
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
@@ -132,6 +134,9 @@ fun CreatorUploadedPage(
                 },
             ) {
                 val columns = rememberVideoGridColumns()
+                val showDateAndViews = Preferences.rememberBooleanPreference(
+                    SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+                )
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(columns), state = gridState,
                     modifier = Modifier.fillMaxSize(),
@@ -142,6 +147,7 @@ fun CreatorUploadedPage(
                     items(items, key = { it.videoCode }) { item ->
                         VideoCardItem(
                             videoItem = item,
+                            showDateAndViews = showDateAndViews,
                             onClickVideosItem = {
                                 onEvent(
                                     CreatorCenterEvent.OnOpenUploadedVideo(

@@ -23,13 +23,18 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -60,6 +65,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
@@ -117,6 +124,22 @@ fun WatchHistoryTabScreen(
     val currentOnlineIsLoadingMore by onlineIsLoadingMore.collectAsState()
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteAllLocalDialog by rememberSaveable { mutableStateOf(false) }
+    var localSearchQuery by rememberSaveable { mutableStateOf("") }
+    var onlineSearchQuery by rememberSaveable { mutableStateOf("") }
+    val filteredLocalHistories = remember(localHistories, localSearchQuery) {
+        if (localSearchQuery.isBlank()) {
+            localHistories
+        } else {
+            localHistories.filter { it.title.contains(localSearchQuery, ignoreCase = true) }
+        }
+    }
+    val filteredOnlineItems = remember(currentOnlineItems, onlineSearchQuery) {
+        if (onlineSearchQuery.isBlank()) {
+            currentOnlineItems
+        } else {
+            currentOnlineItems.filter { it.title.contains(onlineSearchQuery, ignoreCase = true) }
+        }
+    }
 
     val helpMessage = if (pagerState.currentPage == 1) {
         stringResource(R.string.watch_history_online_help)
@@ -194,13 +217,31 @@ fun WatchHistoryTabScreen(
                 )
             }
 
+            val showWatchHistorySearch = Preferences.rememberBooleanPreference(
+                SettingsPreferenceKeys.SHOW_WATCH_HISTORY_SEARCH, true
+            )
+            if (showWatchHistorySearch) {
+                WatchHistorySearchBar(
+                    query = if (pagerState.currentPage == 0) localSearchQuery else onlineSearchQuery,
+                    onQueryChange = {
+                        if (pagerState.currentPage == 0) localSearchQuery = it else onlineSearchQuery = it
+                    },
+                    showLoadedOnlyHint = pagerState.currentPage == 1 &&
+                        onlineSearchQuery.isNotBlank() &&
+                        currentOnlineState !is PageLoadingState.NoMoreData,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 when (page) {
                     0 -> WatchHistoryScreen(
-                        histories = localHistories,
+                        histories = filteredLocalHistories,
                         onBack = onBack,
                         onOpenVideo = onOpenLocalVideo,
                         onDeleteHistory = onDeleteLocalHistory,
@@ -211,7 +252,8 @@ fun WatchHistoryTabScreen(
                     )
 
                     else -> OnlineWatchHistoryScreen(
-                        items = currentOnlineItems,
+                        items = filteredOnlineItems,
+                        isSearching = onlineSearchQuery.isNotBlank(),
                         state = currentOnlineState,
                         sort = currentOnlineSort,
                         loadedPageCount = currentOnlineLoadedPageCount,
@@ -383,6 +425,7 @@ private fun WatchHistoryScreen(
 @Composable
 private fun OnlineWatchHistoryScreen(
     items: List<HanimeInfo>,
+    isSearching: Boolean,
     state: PageLoadingState<*>,
     sort: OnlineWatchHistorySort,
     loadedPageCount: Int,
@@ -412,8 +455,8 @@ private fun OnlineWatchHistoryScreen(
         }
     }
 
-    LaunchedEffect(gridState.canLoadMore(items, state), isLoadingMore) {
-        if (gridState.canLoadMore(items, state) && !isLoadingMore) {
+    LaunchedEffect(gridState.canLoadMore(items, state), isLoadingMore, isSearching) {
+        if (!isSearching && gridState.canLoadMore(items, state) && !isLoadingMore) {
             onLoadMore()
         }
     }
@@ -538,6 +581,9 @@ private fun OnlineWatchHistoryGrid(
     onDeleteVideo: (HanimeInfo) -> Unit,
 ) {
     val videoColumns = rememberVideoGridColumns()
+    val showDateAndViews = Preferences.rememberBooleanPreference(
+        SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+    )
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(videoColumns),
@@ -558,6 +604,7 @@ private fun OnlineWatchHistoryGrid(
             items(items, key = { it.videoCode }) { item ->
                 VideoCardItem(
                     videoItem = item,
+                    showDateAndViews = showDateAndViews,
                     onClickVideosItem = { onOpenVideo(item) },
                     onLongClickVideosItem = { _, _ -> onDeleteVideo(item) },
                 )
@@ -589,6 +636,46 @@ private fun LazyGridState.canLoadMore(
     }
     val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: return false
     return lastVisible >= layoutInfo.totalItemsCount - 4
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun WatchHistorySearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    showLoadedOnlyHint: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier,
+        placeholder = { Text(stringResource(R.string.watch_history_search_hint)) },
+        leadingIcon = {
+            Icon(imageVector = Icons.Default.Search, contentDescription = null)
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.clear_search_query),
+                    )
+                }
+            }
+        },
+        supportingText = if (showLoadedOnlyHint) {
+            { Text(stringResource(R.string.search_scope_hint_loaded_only)) }
+        } else null,
+        singleLine = true,
+        shape = RoundedCornerShape(28.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+        ),
+    )
 }
 
 @Composable

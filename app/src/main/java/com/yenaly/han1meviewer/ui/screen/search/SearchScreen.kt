@@ -81,6 +81,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.SearchHistoryEntity
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
@@ -141,7 +142,9 @@ fun SearchScreen(
     val focusMgr = LocalFocusManager.current
     val kb = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
-    val showPlayedIndicator = Preferences.showPlayedIndicator
+    val showPlayedIndicator = Preferences.rememberBooleanPreference(
+        SettingsPreferenceKeys.SHOW_PLAYED_INDICATOR, true
+    )
 
     // 搜索执行
     fun executeSearch() {
@@ -606,13 +609,19 @@ fun SearchResultsGrid(
         val useNormalGrid = videos.firstOrNull()?.itemType == NORMAL
         val density = LocalDensity.current
         val screenWidthDp = with(density) { LocalWindowInfo.current.containerSize.width.toDp().value.toInt() }
-        val columns = if (Preferences.tabletMode) {
+        val tabletMode = Preferences.rememberBooleanPreference(
+            SettingsPreferenceKeys.TABLET_MODE, false
+        )
+        val columns = if (tabletMode) {
             GridCells.Fixed(Preferences.searchGridColumnsConfig.columnsForWidthDp(screenWidthDp))
         } else {
             GridCells.Adaptive(
                 minSize = if (useNormalGrid) normalCardWidth else simplifiedCardWidth,
             )
         }
+        val showDateAndViews = Preferences.rememberBooleanPreference(
+            SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+        )
 
         LazyVerticalGrid(
             columns = columns,
@@ -628,6 +637,7 @@ fun SearchResultsGrid(
                     videoItem = it,
                     isHorizontalCard = it.itemType == NORMAL,
                     isWatched = showPlayedIndicator && it.watched == true,
+                    showDateAndViews = showDateAndViews,
                     onClickVideosItem =  onVideoClick,
                     onLongClickVideosItem = {_, _ ->}
                 )

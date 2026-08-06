@@ -1,12 +1,21 @@
 package com.yenaly.han1meviewer.ui.screen.home
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -22,9 +31,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
@@ -84,8 +97,16 @@ fun VideoGridScreen(
     var pendingDelete by remember { mutableStateOf<HanimeInfo?>(null) }
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var pendingRefresh by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     val deleteFailedText = stringResource(R.string.delete_failed)
     val deleteSuccessText = stringResource(R.string.delete_success)
+    val filteredItems = remember(items, searchQuery) {
+        if (searchQuery.isBlank()) {
+            items
+        } else {
+            items.filter { it.title.contains(searchQuery, ignoreCase = true) }
+        }
+    }
 
     val refreshing = state is PageLoadingState.Loading && pendingRefresh
     val refreshingState = rememberPullToRefreshState()
@@ -106,8 +127,8 @@ fun VideoGridScreen(
         }
     }
 
-    LaunchedEffect(gridState.canLoadMore(items, state), pendingRefresh, isLoadingMore) {
-        if (gridState.canLoadMore(items, state) && !pendingRefresh && !isLoadingMore) {
+    LaunchedEffect(gridState.canLoadMore(items, state), pendingRefresh, isLoadingMore, searchQuery) {
+        if (searchQuery.isBlank() && gridState.canLoadMore(items, state) && !pendingRefresh && !isLoadingMore) {
             onLoadMore()
         }
     }
@@ -146,7 +167,7 @@ fun VideoGridScreen(
     )
 
     val uiState = VideoGridUiState(
-        items = items,
+        items = filteredItems,
         state = state,
         loadedPageCount = loadedPageCount,
         isLoadingMore = isLoadingMore,
@@ -154,6 +175,7 @@ fun VideoGridScreen(
         isError = isError,
         isEmpty = isEmpty,
     )
+    val isSearchEmpty = searchQuery.isNotBlank() && filteredItems.isEmpty() && items.isNotEmpty()
 
     HanimeScaffold(
         title = stringResource(titleRes),
@@ -175,55 +197,116 @@ fun VideoGridScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = refreshing,
-            state = refreshingState,
-            onRefresh = {
-                pendingRefresh = true
-                onRefresh()
-            },
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = refreshingState,
-                    isRefreshing = refreshing,
-                    modifier = Modifier.align(Alignment.TopCenter),
+        ) {
+            val showMyListSearch = Preferences.rememberBooleanPreference(
+                SettingsPreferenceKeys.SHOW_MY_LIST_SEARCH, true
+            )
+            if (showMyListSearch && (items.isNotEmpty() || searchQuery.isNotBlank())) {
+                MyListSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    showLoadedOnlyHint = searchQuery.isNotBlank() && state !is PageLoadingState.NoMoreData,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-        ) {
-            PageContent(
-                isLoading = false,
-                isError = isError,
-                isEmpty = isEmpty,
-                onRetry = {
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                state = refreshingState,
+                onRefresh = {
                     pendingRefresh = true
                     onRefresh()
                 },
-                error = {
-                    ErrorContent(
-                        title = stringResource(R.string.load_failed_retry),
-                        onRetry = {
-                            pendingRefresh = true
-                            onRefresh()
-                        },
-                        modifier = Modifier.align(Alignment.Center),
+                modifier = Modifier.fillMaxSize(),
+                indicator = {
+                    PullToRefreshDefaults.LoadingIndicator(
+                        state = refreshingState,
+                        isRefreshing = refreshing,
+                        modifier = Modifier.align(Alignment.TopCenter),
                     )
-                },
-                empty = {
-                    EmptyContent(hint = stringResource(R.string.empty_content))
-                },
+                }
             ) {
-                VideoGridContent(
-                    uiState = uiState,
-                    gridState = gridState,
-                    onOpenVideo = onOpenVideo,
-                    onDeleteItem = { pendingDelete = it },
-                )
+                PageContent(
+                    isLoading = false,
+                    isError = isError,
+                    isEmpty = isEmpty,
+                    onRetry = {
+                        pendingRefresh = true
+                        onRefresh()
+                    },
+                    error = {
+                        ErrorContent(
+                            title = stringResource(R.string.load_failed_retry),
+                            onRetry = {
+                                pendingRefresh = true
+                                onRefresh()
+                            },
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    },
+                    empty = {
+                        EmptyContent(hint = stringResource(R.string.empty_content))
+                    },
+                ) {
+                    if (isSearchEmpty) {
+                        EmptyContent(hint = stringResource(R.string.search_no_results))
+                    } else {
+                        VideoGridContent(
+                            uiState = uiState,
+                            gridState = gridState,
+                            onOpenVideo = onOpenVideo,
+                            onDeleteItem = { pendingDelete = it },
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun MyListSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    showLoadedOnlyHint: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier,
+        placeholder = { Text(stringResource(R.string.search_video_hint)) },
+        leadingIcon = {
+            Icon(imageVector = Icons.Default.Search, contentDescription = null)
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.clear_search_query),
+                    )
+                }
+            }
+        },
+        supportingText = if (showLoadedOnlyHint) {
+            { Text(stringResource(R.string.search_scope_hint_loaded_only)) }
+        } else null,
+        singleLine = true,
+        shape = RoundedCornerShape(28.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedBorderColor = Color.Transparent,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+        ),
+    )
 }
 
 @Preview(showBackground = true, widthDp = 420, heightDp = 900)

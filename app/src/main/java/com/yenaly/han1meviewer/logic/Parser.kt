@@ -246,14 +246,11 @@ object Parser {
         val durationAndViews = hanimeSearchItem.select("div[class^=thumb-container]")
         val duration = durationAndViews.select("div[class^=duration]").text()
         val views = durationAndViews.select("div[class^=stat-item]").getOrNull(1)?.text()
-        val artistAndUploadTime = hanimeSearchItem.selectFirst("div.subtitle a, div.video-meta-data a")!!.text().trim()
-        var artist = ""
-        var uploadTime = ""
-        if (artistAndUploadTime.contains("•")) {
-            val parts = artistAndUploadTime.split("•").map { it.trim() }
-            artist = parts[0].trim()
-            uploadTime = parts[1].trim()
-        }
+        val artistAndUploadTime = hanimeSearchItem.selectFirst("div.subtitle, div.video-meta-data")
+            ?.text()?.trim().orEmpty()
+        val artistTimeParts = artistAndUploadTime.split("•").map { it.trim() }
+        val artist = artistTimeParts.getOrNull(0).orEmpty()
+        val uploadTime = artistTimeParts.getOrNull(1).orEmpty()
         val infoBoxes = hanimeSearchItem.selectFirst(".stats-container .stat-item")
         val reviews = infoBoxes?.ownText()?.trim() ?: ""
         return HanimeInfo(
@@ -1114,14 +1111,11 @@ object Parser {
                     val durationAndViews = videoCard.select("div[class^=thumb-container]")
                     val duration = durationAndViews.select("div[class^=duration]").text()
                     val views = durationAndViews.select("div[class^=stat-item]").getOrNull(1)?.text()
-                    val artistAndUploadTime = videoCard.select("div.subtitle a").text().trim()
-                    var artist = ""
-                    var uploadTime = ""
-                    if (artistAndUploadTime.contains("•")) {
-                        val parts = artistAndUploadTime.split("•").map { it.trim() }
-                        artist = parts[0].trim()
-                        uploadTime = parts[1].trim()
-                    }
+                    val artistAndUploadTime = videoCard.selectFirst("div.subtitle")
+                        ?.text()?.trim().orEmpty()
+                    val artistTimeParts = artistAndUploadTime.split("•").map { it.trim() }
+                    val artist = artistTimeParts.getOrNull(0).orEmpty()
+                    val uploadTime = artistTimeParts.getOrNull(1).orEmpty()
                     val infoBoxes = videoCard.selectFirst(".stats-container .stat-item")
                     val reviews = infoBoxes?.ownText()?.trim() ?: ""
 

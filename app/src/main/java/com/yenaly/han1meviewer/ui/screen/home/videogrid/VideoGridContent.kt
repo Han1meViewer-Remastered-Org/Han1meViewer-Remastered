@@ -9,10 +9,12 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 
@@ -36,6 +38,9 @@ fun VideoGridContent(
     modifier: Modifier = Modifier,
 ) {
     val videoColumns = rememberVideoGridColumns()
+    val showDateAndViews = Preferences.rememberBooleanPreference(
+        SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+    )
     LazyVerticalGrid(
         columns = GridCells.Fixed(videoColumns),
         state = gridState,
@@ -48,6 +53,7 @@ fun VideoGridContent(
             VideoCardItem(
                 videoItem = item,
                 isHorizontalCard = true,
+                showDateAndViews = showDateAndViews,
                 onClickVideosItem = { onOpenVideo(item) },
                 onLongClickVideosItem = { _, _ -> onDeleteItem(item) },
             )

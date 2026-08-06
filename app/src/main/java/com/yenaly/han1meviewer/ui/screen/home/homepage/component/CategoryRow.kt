@@ -21,9 +21,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.ui.component.lazy.LazyRow
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeHomePageVideos
@@ -77,6 +79,9 @@ fun CategoryRow(
 
         val uniqueVideos = videos.distinctBy { it.videoCode }
         val (cardWidth, _) = rememberCardResponsiveWidth()
+        val showDateAndViews = Preferences.rememberBooleanPreference(
+            SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+        )
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
@@ -87,6 +92,7 @@ fun CategoryRow(
                     modifier = Modifier.width(cardWidth),
                     videoItem = video,
                     isHorizontalCard = true,
+                    showDateAndViews = showDateAndViews,
                     onClickVideosItem = onVideoClick,
                     onLongClickVideosItem = onVideoLongClick
                 )

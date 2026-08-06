@@ -11,8 +11,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 
 /**
@@ -21,13 +23,13 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
  * 展示加载指示器和提示文本。
  *
  * @param modifier 修饰符
- * @param message 加载提示文本，默认为"加载中..."
+ * @param message 加载提示文本，默认为通用的"加载中…"字符串资源
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoadingContent(
     modifier: Modifier = Modifier,
-    message: String = "加载中...",
+    message: String = stringResource(R.string.loading),
 ) {
     Column(
         modifier = modifier

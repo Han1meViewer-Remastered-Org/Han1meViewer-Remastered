@@ -21,7 +21,7 @@ fun PageContent(
     onRetry: () -> Unit = {},
     loading: @Composable () -> Unit = {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            LoadingContent(message = loadingMessage)
+            if (loadingMessage.isBlank()) LoadingContent() else LoadingContent(message = loadingMessage)
         }
     },
     error: @Composable () -> Unit = {

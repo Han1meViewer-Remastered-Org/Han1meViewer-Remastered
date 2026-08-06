@@ -46,8 +46,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.SubscriptionItem
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.ArtistItem
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
@@ -84,6 +86,9 @@ fun SubscriptionContent(
     val screenWidthPx = windowInfo.containerSize.width
     val screenWidthDp = with(density) { screenWidthPx.toDp() }
     val videoColumns = rememberVideoGridColumns()
+    val showDateAndViews = Preferences.rememberBooleanPreference(
+        SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
+    )
     val artistRows = 3
     val artistColumns = maxOf(
         3,
@@ -160,6 +165,7 @@ fun SubscriptionContent(
                 ) {
                     VideoCardItem(
                         videoItem = video,
+                        showDateAndViews = showDateAndViews,
                         onClickVideosItem = {
                             onEvent(
                                 SubscriptionEvent.OnClickVideo(video.videoCode)

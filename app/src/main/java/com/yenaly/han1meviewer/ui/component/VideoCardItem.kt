@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.VideoItemType
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
@@ -50,6 +51,8 @@ import com.yenaly.han1meviewer.util.DisplayTextLocalizer
  * @param isHorizontalCard 是否为水平卡片布局，默认为 true
  * @param onClickVideosItem 点击回调，参数为视频 ID
  * @param onLongClickVideosItem 长按回调，参数为视频 ID 和视频标题
+ * @param showDateAndViews 是否展示发行日期，由调用方在列表外读取一次 [Preferences.showDateAndViewsInCard] 后传入，
+ *   避免长列表滚动时每个卡片都各自查询一次 SharedPreferences
  */
 @Composable
 fun VideoCardItem(
@@ -58,6 +61,7 @@ fun VideoCardItem(
     isHorizontalCard: Boolean = true,
     isWatched: Boolean = false,
     isPlaying: Boolean = false,
+    showDateAndViews: Boolean = Preferences.showDateAndViewsInCard,
     onClickVideosItem: (String) -> Unit,
     onLongClickVideosItem: (String, String) -> Unit,
 ) {
@@ -212,7 +216,7 @@ fun VideoCardItem(
                     .padding(horizontal = 8.dp),
             )
             Text(
-                text = videoItem.currentArtist ?: "作者",
+                text = videoItem.currentArtist?.ifBlank { null } ?: stringResource(R.string.unknown_artist),
                 maxLines = 1,
                 style = MaterialTheme.typography.labelSmall,
                 overflow = TextOverflow.Ellipsis,
@@ -244,14 +248,21 @@ fun VideoCardItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                if (!videoItem.uploadTime.isNullOrEmpty()) {
+                if (showDateAndViews && !videoItem.uploadTime.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_baseline_calendar_today_24),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(iconSize),
+                    )
                     Text(
+                        modifier = Modifier.padding(horizontal = 2.dp),
                         text = DisplayTextLocalizer.localizeRelativeTime(videoItem.uploadTime!!),
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
