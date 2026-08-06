@@ -8,7 +8,7 @@
       { "id": "monthly", "text": "每月：修复与新功能定期攒一批发布，节奏适中" },
       { "id": "quarterly", "text": "数月一次：攒够改动量再发，最稳定但要等得久" }
     ],
-    "isActive": true
+    "isActive": false
   },
   {
     "id": "update-direction-2026-08",
@@ -20,6 +20,6 @@
       { "id": "new-features", "text": "开发新功能" },
       { "id": "network", "text": "网络/访问相关增强（Cloudflare 验证、镜像域名等）" }
     ],
-    "isActive": true
+    "isActive": false
   }
 ]
