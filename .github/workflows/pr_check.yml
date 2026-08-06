@@ -24,6 +24,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Remove Aliyun mirror repositories (unreachable from GitHub-hosted runners)
+        run: sed -i '/maven\.aliyun\.com/d' settings.gradle.kts
+
       - name: Load Google Services File
         env:
           DATA: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
