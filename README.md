@@ -2,7 +2,7 @@
 
 > ⚠️ **临时镜像仓库说明**
 >
-> 本仓库（`Han1meViewer-Remastered-Org/Han1meViewer-Remastered`）是**临时镜像**。主仓库 [`5APU-A340/Han1meViewer-Remastered`](https://github.com/5APU-A340/Han1meViewer-Remastered) 所属的 GitHub 账号 `5APU-A340` 目前被 GitHub 暂停（原因：短时间内使用官方 `gh` CLI 批量操作触发自动风控，正在申诉中），账号被暂停期间该仓库对所有人（包括仓库所有者本人）不可见，因此临时在维护者的另一个可用账号下创建本组织与本仓库，仅同步发布**最新版本**（v1.1.3）的源码与预编译产物，保证用户在此期间仍能获取最新版应用。
+> 本仓库（`Han1meViewer-Remastered-Org/Han1meViewer-Remastered`）是**临时镜像**。主仓库 [`5APU-A340/Han1meViewer-Remastered`](https://github.com/5APU-A340/Han1meViewer-Remastered) 所属的 GitHub 账号 `5APU-A340` 目前被 GitHub 暂停（原因：短时间内使用官方 `gh` CLI 批量操作触发自动风控，正在申诉中），账号被暂停期间该仓库对所有人（包括仓库所有者本人）不可见，因此临时在维护者的另一个可用账号下创建本组织与本仓库，仅同步发布**最新版本**（v1.1.4）的源码与预编译产物，保证用户在此期间仍能获取最新版应用。
 >
 > 从 v1.1.3 起，应用内的更新检测和公告拉取新增了自动兜底逻辑：优先请求主仓库，请求失败（如账号被暂停期间）才会改请求本临时仓库；主账号一旦恢复，下一次检测会自动优先切回主仓库，无需用户或维护者手动干预。
 >
