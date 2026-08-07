@@ -32,7 +32,7 @@ object Config {
          *         debug (fixed): debug+1
          */
         fun Project.createVersion(
-            major: Int, minor: Int, patch: Int
+            major: Int, minor: Int, patch: Int, hotfix: Int = 0
         ): Pair<Int, String> {
             val source = this.source
             val versionCode: Int
@@ -47,7 +47,9 @@ object Config {
                     versionCode = LocalDateTime.now(Clock.systemUTC()).format(
                         DateTimeFormatter.ofPattern("yyMMddHH")
                     ).toInt()
-                    versionName = "${major}.${minor}.${patch}-$source+$versionCode"
+                    val baseVersion = "${major}.${minor}.${patch}" +
+                            if (hotfix > 0) ".$hotfix" else ""
+                    versionName = "$baseVersion-$source+$versionCode"
                 }
             }
             return versionCode to versionName
