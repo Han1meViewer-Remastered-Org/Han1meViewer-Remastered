@@ -48,7 +48,7 @@ import com.yenaly.han1meviewer.ui.component.isFirstPageError
 import com.yenaly.han1meviewer.ui.component.isFirstPageLoading
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
-import com.yenaly.han1meviewer.util.toNetworkErrorMessageRes
+import com.yenaly.han1meviewer.util.toNetworkErrorMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,9 +131,7 @@ fun GetchuPreviewScreen(
             isLoading = state.isFirstPageLoading,
             isError = state.isFirstPageError,
             isEmpty = state.isFirstPageEmpty || state.dataOrNull?.groups?.isEmpty() == true,
-            errorMessage = (state as? PageState.Error)?.throwable?.toNetworkErrorMessageRes()?.let {
-                stringResource(it)
-            } ?: "",
+            errorMessage = (state as? PageState.Error)?.throwable?.toNetworkErrorMessage(context) ?: "",
             onRetry = { viewModel.getPreview(dateCode) },
             modifier = Modifier.fillMaxSize(),
             loadingMessage = loadingHint

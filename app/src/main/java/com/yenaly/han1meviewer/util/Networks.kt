@@ -1,7 +1,14 @@
 package com.yenaly.han1meviewer.util
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.telephony.TelephonyManager
 import com.google.common.util.concurrent.ListenableFuture
+import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -12,6 +19,7 @@ import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.util.Locale
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
 import javax.net.ssl.SSLHandshakeException
@@ -147,5 +155,91 @@ fun Throwable.toNetworkErrorMessageRes(): Int {
         else -> {
             R.string.home_error_generic
         }
+    }
+}
+
+/**
+ * 判断这个异常是否属于"连接层面直接失败"（DNS 解析失败/连接超时/连接被拒/连接被重置），
+ * 而不是"请求送达了目标站点，但站点返回了错误状态码"（403/404/5xx）。
+ *
+ * 国内大陆网络在无代理/VPN 直连时对被墙站点通常表现为前者（DNS 污染、连接超时、连接重置），
+ * 不会真的收到站点返回的 HTTP 响应，因此可以用这个区分作为"是否可能是被墙"的信号之一。
+ */
+private fun Throwable.isConnectionLevelFailure(): Boolean {
+    val rawMessage = message.orEmpty().lowercase()
+    return this is UnknownHostException || this is SocketTimeoutException ||
+            this is ConnectException || this is SocketException ||
+            rawMessage.contains("unable to resolve host") ||
+            rawMessage.contains("no address associated with hostname") ||
+            rawMessage.contains("timeout") ||
+            rawMessage.contains("failed to connect") ||
+            rawMessage.contains("connection reset")
+}
+
+/**
+ * 当前设备是否已经启用了代理或 VPN。
+ *
+ * 覆盖两种情况：应用内手动配置了 HTTP/SOCKS 代理（[Preferences.proxyType]），
+ * 或系统当前活跃网络本身就是通过 VPN 接口路由的（不论是本应用的代理还是外部 VPN App）。
+ */
+private fun isProxyOrVpnActive(context: Context): Boolean {
+    val manualProxyConfigured = Preferences.proxyType == HProxySelector.TYPE_HTTP ||
+            Preferences.proxyType == HProxySelector.TYPE_SOCKS
+    if (manualProxyConfigured) return true
+
+    return runCatching {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val activeNetwork = connectivityManager?.activeNetwork ?: return@runCatching false
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+        capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+    }.getOrDefault(false)
+}
+
+/**
+ * 粗略判断设备当前是否处于中国大陆网络环境。
+ *
+ * 优先读取蜂窝网络的注册地信号（[TelephonyManager.getNetworkCountryIso]，仅在有效蜂窝连接时可靠），
+ * 拿不到时回退到系统 Locale 的国家代码。两者都只是弱信号，仅用于是否展示这条软性提示，不作为强判断。
+ */
+private fun isLikelyMainlandChinaNetwork(context: Context): Boolean {
+    val networkCountryIso = runCatching {
+        val telephonyManager =
+            context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+        telephonyManager?.networkCountryIso.orEmpty()
+    }.getOrDefault("")
+    if (networkCountryIso.isNotBlank()) {
+        return networkCountryIso.equals("cn", ignoreCase = true)
+    }
+    return Locale.getDefault().country.equals("CN", ignoreCase = true)
+}
+
+/**
+ * 首页加载异常对应的可展示错误文案。
+ *
+ * 优先级：
+ * 1. [CloudFlareBlockedException]（含 [com.yenaly.han1meviewer.logic.exception.IPBlockedException]）
+ *    自带的 [Throwable.message] 已经包含了具体成因（例如日本 IP 被 Cloudflare 拦截的提示），
+ *    直接展示，不走后续兜底逻辑。
+ * 2. 连接层面直接失败（[isConnectionLevelFailure]）+ 当前既没有开代理/VPN（[isProxyOrVpnActive]）
+ *    也大概率处于中国大陆网络（[isLikelyMainlandChinaNetwork]）时，提示用户目标网站在国内大陆
+ *    网络下通常需要代理/VPN 才能访问，而不是笼统地说"加载失败请重试"。
+ * 3. 其余情况回退到通用的字符串资源映射（[toNetworkErrorMessageRes]）。
+ *
+ * @receiver 首页加载过程中抛出的异常
+ * @return 可直接展示给用户的错误文案
+ */
+fun Throwable.toNetworkErrorMessage(context: Context): String {
+    val ownMessage = (this as? CloudFlareBlockedException)?.message
+    return when {
+        !ownMessage.isNullOrBlank() -> ownMessage
+
+        isConnectionLevelFailure() &&
+                !isProxyOrVpnActive(context) &&
+                isLikelyMainlandChinaNetwork(context) -> {
+            context.getString(R.string.china_network_no_proxy_hint)
+        }
+
+        else -> context.getString(toNetworkErrorMessageRes())
     }
 }

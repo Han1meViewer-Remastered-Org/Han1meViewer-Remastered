@@ -25,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageState
@@ -37,7 +36,7 @@ import com.yenaly.han1meviewer.ui.component.isFirstPageError
 import com.yenaly.han1meviewer.ui.component.isFirstPageLoading
 import com.yenaly.han1meviewer.ui.screen.home.homepage.component.HomePageTopBar
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
-import com.yenaly.han1meviewer.util.toNetworkErrorMessageRes
+import com.yenaly.han1meviewer.util.toNetworkErrorMessage
 
 /**
  * 首页容器屏幕，负责连接 ViewModel 状态与导航回调。
@@ -76,7 +75,7 @@ fun HomePageScreen(
         if (wasRefreshing && errorState?.cachedInfo != null) {
             Toast.makeText(
                 context,
-                errorState.throwable.toNetworkErrorMessageRes(),
+                errorState.throwable.toNetworkErrorMessage(context),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -109,9 +108,7 @@ fun HomePageScreen(
                     isLoading = pageState.isFirstPageLoading,
                     isError = pageState.isFirstPageError,
                     isEmpty = pageState.isFirstPageError || pageState.isFirstPageEmpty,
-                    errorMessage = (pageState as? PageState.Error)?.throwable?.toNetworkErrorMessageRes()?.let {
-                        stringResource(it)
-                    } ?: "",
+                    errorMessage = (pageState as? PageState.Error)?.throwable?.toNetworkErrorMessage(context) ?: "",
                     onRetry = { viewModel.getHomePage(isRefresh = false) },
                     loadingMessage = loadingHint,
                 ) {
