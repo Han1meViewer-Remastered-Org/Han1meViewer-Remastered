@@ -967,6 +967,8 @@
     <string name="home_error_server_unavailable">伺服器暫時不可用，請稍後再試。</string>
     <string name="home_error_generic">頁面載入失敗，請檢查網路連線後重試。</string>
     <string name="china_network_no_proxy_hint">偵測到您可能正在使用中國大陸網路直連本站，且未偵測到已啟用代理／VPN。hanime 網站在中國大陸網路下通常無法直接連線，建議開啟代理／VPN 後重試。</string>
+    <string name="network_unreachable_settings_hint">若持續連線不上，可到「設定 → 網路」開啟「內建 Hosts」，或改用其他鏡像站點。</string>
+    <string name="go_to_network_settings">前往網路設定</string>
     <string name="backup_export_title">匯出資料備份</string>
     <string name="backup_export_summary">匯出設定、觀看歷史、下載分組與影片資訊、H 關鍵幀與打卡記錄，方便換機還原</string>
     <string name="backup_import_title">匯入資料備份</string>

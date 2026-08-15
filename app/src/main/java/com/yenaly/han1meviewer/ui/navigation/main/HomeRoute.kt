@@ -36,6 +36,7 @@ fun HomeRouteScreen(
     onNavigateToSearch: (String?) -> Unit,
     onNavigateToSearchAdvanced: (Map<String, String>) -> Unit,
     onNavigateToVideo: (String) -> Unit,
+    onNavigateToNetworkSettings: () -> Unit,
 ) {
     val viewModel = activity.viewModel
     val checkInViewModel: CheckInCalendarViewModel = viewModel()
@@ -67,6 +68,7 @@ fun HomeRouteScreen(
                     }
                     is HomeUiEvent.ShowAnnouncementDialog -> { announcement = event.announcement }
                     is HomeUiEvent.ShowExitDialog -> { showExitDialog = true }
+                    is HomeUiEvent.NavigateToNetworkSettings -> onNavigateToNetworkSettings()
                 }
             }
         )

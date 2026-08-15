@@ -12,6 +12,7 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.model.Poll
 import com.yenaly.han1meviewer.logic.model.PollDto
 import com.yenaly.han1meviewer.logic.network.service.HGitHubService
+import com.yenaly.han1meviewer.util.Rollout
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.decodeFromString
 
@@ -35,7 +36,7 @@ object PollRepository {
         if (!response.isSuccessful) return@runCatching null
         val body = response.body()?.string().orEmpty()
         HJson.decodeFromString<List<PollDto>>(body)
-            .filter { it.isActive }
+            .filter { it.isActive && Rollout.isInRollout(it.id, it.rolloutPercentage) }
             .map { it.toPoll() }
     }.getOrElse { e ->
         Log.e(TAG, "读取投票配置失败: ${e.message}")

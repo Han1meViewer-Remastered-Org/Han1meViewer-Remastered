@@ -49,6 +49,7 @@
             android:name=".ui.activity.CloudflareActivity"
             android:theme="@style/Theme.Hanime"
             android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
             android:launchMode="singleTask"/>
 
         <service

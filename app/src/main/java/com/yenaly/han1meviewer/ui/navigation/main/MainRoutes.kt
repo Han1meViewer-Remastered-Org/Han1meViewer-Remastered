@@ -208,6 +208,17 @@ enum class MainDestinationSpec(
         drawerEnabled = false,
     );
 
+    /**
+     * 上报给 Firebase / GA4 的屏幕名，由路由类名推导（`HomeRoute` → `HomeScreen`）。
+     *
+     * 从类名推导而不是逐条手写，是为了新增路由时不会漏配——漏配的后果就是该页面在
+     * GA4 里落到 `(not set)`，而这恰恰是之前统计面板里绝大多数屏幕名都不可用的原因。
+     * 命名方式与 [com.yenaly.han1meviewer.ui.navigation.settings.SettingsDestinationSpec]
+     * 里手写的那套保持一致（如 `NetworkSettingsScreen`）。
+     */
+    val screenClassName: String
+        get() = (routeClass.simpleName ?: name).removeSuffix("Route") + "Screen"
+
     companion object {
         fun fromDestination(destination: NavDestination?): MainDestinationSpec? {
             if (destination == null) return null

@@ -913,6 +913,8 @@ Recommendations are as follows:\n
     <string name="home_error_server_unavailable">The server is temporarily unavailable. Please try again later.</string>
     <string name="home_error_generic">Failed to load the page. Please check your network connection and try again.</string>
     <string name="china_network_no_proxy_hint">It looks like you\'re connecting directly from a mainland China network without a proxy/VPN enabled. The hanime site is usually unreachable that way — try enabling a proxy/VPN and retry.</string>
+    <string name="network_unreachable_settings_hint">If it keeps failing, open Settings → Network and turn on Built-in Hosts, or switch to another mirror site.</string>
+    <string name="go_to_network_settings">Network settings</string>
     <string name="backup_export_title">Export Data Backup</string>
     <string name="backup_export_summary">Export settings, watch history, download groups and video info, H keyframes, and check-in records for device migration</string>
     <string name="backup_import_title">Import Data Backup</string>

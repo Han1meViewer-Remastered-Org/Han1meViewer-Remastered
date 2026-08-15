@@ -918,6 +918,8 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="home_error_server_unavailable">サーバーは一時的に利用できません。しばらくしてから再試行してください。</string>
     <string name="home_error_generic">ページの読み込みに失敗しました。ネットワーク接続を確認してから再試行してください。</string>
     <string name="china_network_no_proxy_hint">中国大陸のネットワークからプロキシ／VPNを使わずに直接アクセスしている可能性があります。hanime サイトは通常この環境では接続できません。プロキシ／VPNを有効にしてから再試行してください。</string>
+    <string name="network_unreachable_settings_hint">接続できない状態が続く場合は、「設定 → ネットワーク」で「内蔵 Hosts」を有効にするか、別のミラーサイトに切り替えてみてください。</string>
+    <string name="go_to_network_settings">ネットワーク設定へ</string>
     <string name="backup_export_title">データバックアップをエクスポート</string>
     <string name="backup_export_summary">設定、視聴履歴、ダウンロードグループと動画情報、Hキーフレーム、チェックイン記録をエクスポートして機種変更時に復元できます</string>
     <string name="backup_import_title">データバックアップをインポート</string>

@@ -15,5 +15,9 @@ sealed interface HomeUiEvent {
     data class OpenVideo(val videoCode: String) : HomeUiEvent
     data class LongPressVideoCopy(val videoCode: String, val videoTitle: String) : HomeUiEvent
     data object ShowExitDialog : HomeUiEvent
+
+    /** 首页因网络连不上而加载失败时，从错误页直接跳到网络设置（内置 Hosts / 镜像站点在那里）。 */
+    data object NavigateToNetworkSettings : HomeUiEvent
+
     data class ShowAnnouncementDialog(val announcement: Announcement) : HomeUiEvent
 }

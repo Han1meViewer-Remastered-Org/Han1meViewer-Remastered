@@ -22,6 +22,7 @@ import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.logout
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
+import com.yenaly.han1meviewer.util.Rollout
 import com.yenaly.yenaly_libs.utils.getSpValue
 import com.yenaly.yenaly_libs.utils.putSpValue
 import kotlinx.coroutines.Dispatchers
@@ -126,7 +127,7 @@ class HomePageViewModel: ViewModel() {
         if (!response.isSuccessful) return@runCatching null
         val body = response.body()?.string().orEmpty()
         HJson.decodeFromString<List<AnnouncementDto>>(body)
-            .filter { it.isActive }
+            .filter { it.isActive && Rollout.isInRollout(it.rolloutKey, it.rolloutPercentage) }
             .sortedBy { it.priority }
             .map { it.toAnnouncement() }
     }.getOrElse { e ->

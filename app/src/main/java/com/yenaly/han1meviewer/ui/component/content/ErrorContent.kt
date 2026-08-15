@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +29,8 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
  * @param title 错误标题，默认为"加载失败"
  * @param message 错误详情，为 null 或空白时不显示
  * @param onRetry 重试回调，为 null 时不显示重试按钮
+ * @param secondaryActionText 次要操作按钮文案，与 [onSecondaryAction] 同时非空时才显示
+ * @param onSecondaryAction 次要操作回调，用于给出比"重试"更进一步的排查入口（如跳转网络设置）
  */
 @Composable
 fun ErrorContent(
@@ -36,6 +39,8 @@ fun ErrorContent(
     message: String? = null,
     onRetry: (() -> Unit)? = null,
     retryText: String = stringResource(R.string.retry),
+    secondaryActionText: String? = null,
+    onSecondaryAction: (() -> Unit)? = null,
 ) {
     val resolvedTitle = title ?: stringResource(R.string.load_failed_retry)
     Column(
@@ -64,6 +69,11 @@ fun ErrorContent(
         if (onRetry != null) {
             Button(onClick = onRetry) {
                 Text(retryText)
+            }
+        }
+        if (onSecondaryAction != null && !secondaryActionText.isNullOrBlank()) {
+            TextButton(onClick = onSecondaryAction) {
+                Text(secondaryActionText)
             }
         }
     }

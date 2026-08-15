@@ -22,20 +22,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.logic.state.dataOrNull
 import com.yenaly.han1meviewer.ui.component.PageContent
 import com.yenaly.han1meviewer.ui.component.PullRefreshOverlay
+import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.isFirstPageEmpty
 import com.yenaly.han1meviewer.ui.component.isFirstPageError
 import com.yenaly.han1meviewer.ui.component.isFirstPageLoading
 import com.yenaly.han1meviewer.ui.screen.home.homepage.component.HomePageTopBar
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
+import com.yenaly.han1meviewer.util.isConnectionLevelFailure
 import com.yenaly.han1meviewer.util.toNetworkErrorMessage
 
 /**
@@ -104,13 +108,30 @@ fun HomePageScreen(
                         }
                     )
             ) {
+                val errorThrowable = (pageState as? PageState.Error)?.throwable
                 PageContent(
                     isLoading = pageState.isFirstPageLoading,
                     isError = pageState.isFirstPageError,
                     isEmpty = pageState.isFirstPageError || pageState.isFirstPageEmpty,
-                    errorMessage = (pageState as? PageState.Error)?.throwable?.toNetworkErrorMessage(context) ?: "",
+                    errorMessage = errorThrowable?.toNetworkErrorMessage(context) ?: "",
                     onRetry = { viewModel.getHomePage(isRefresh = false) },
                     loadingMessage = loadingHint,
+                    error = {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            ErrorContent(
+                                message = errorThrowable?.toNetworkErrorMessage(context).orEmpty(),
+                                onRetry = { viewModel.getHomePage(isRefresh = false) },
+                                // 只在「压根连不上」时才给这个入口：内置 Hosts / 镜像站点是针对
+                                // DNS 污染、主域名被墙这类问题的，站点已经能应答的错误给了反而是噪音。
+                                secondaryActionText = if (errorThrowable?.isConnectionLevelFailure() == true) {
+                                    stringResource(R.string.go_to_network_settings)
+                                } else null,
+                                onSecondaryAction = if (errorThrowable?.isConnectionLevelFailure() == true) {
+                                    { onEvent(HomeUiEvent.NavigateToNetworkSettings) }
+                                } else null,
+                            )
+                        }
+                    },
                 ) {
                     val homeData = pageState.dataOrNull
 

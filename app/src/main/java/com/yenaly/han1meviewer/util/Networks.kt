@@ -165,7 +165,7 @@ fun Throwable.toNetworkErrorMessageRes(): Int {
  * 国内大陆网络在无代理/VPN 直连时对被墙站点通常表现为前者（DNS 污染、连接超时、连接重置），
  * 不会真的收到站点返回的 HTTP 响应，因此可以用这个区分作为"是否可能是被墙"的信号之一。
  */
-private fun Throwable.isConnectionLevelFailure(): Boolean {
+fun Throwable.isConnectionLevelFailure(): Boolean {
     val rawMessage = message.orEmpty().lowercase()
     return this is UnknownHostException || this is SocketTimeoutException ||
             this is ConnectException || this is SocketException ||
@@ -226,15 +226,20 @@ private fun isLikelyMainlandChinaNetwork(context: Context): Boolean {
  *    网络下通常需要代理/VPN 才能访问，而不是笼统地说"加载失败请重试"。
  * 3. 其余情况回退到通用的字符串资源映射（[toNetworkErrorMessageRes]）。
  *
+ * 另外，只要属于连接层面失败（不管有没有开代理），都会再追加一句可操作的排查建议：
+ * 引导用户去「设置 → 网络」开启内置 Hosts 或更换镜像站点。这两项设置正是为了应对
+ * DNS 污染 / 主域名被墙这类连不上的情况，但默认关闭，很多用户并不知道它们的存在。
+ *
  * @receiver 首页加载过程中抛出的异常
  * @return 可直接展示给用户的错误文案
  */
 fun Throwable.toNetworkErrorMessage(context: Context): String {
     val ownMessage = (this as? CloudFlareBlockedException)?.message
-    return when {
-        !ownMessage.isNullOrBlank() -> ownMessage
+    if (!ownMessage.isNullOrBlank()) return ownMessage
 
-        isConnectionLevelFailure() &&
+    val connectionLevelFailure = isConnectionLevelFailure()
+    val primary = when {
+        connectionLevelFailure &&
                 !isProxyOrVpnActive(context) &&
                 isLikelyMainlandChinaNetwork(context) -> {
             context.getString(R.string.china_network_no_proxy_hint)
@@ -242,4 +247,6 @@ fun Throwable.toNetworkErrorMessage(context: Context): String {
 
         else -> context.getString(toNetworkErrorMessageRes())
     }
+    if (!connectionLevelFailure) return primary
+    return primary + "\n\n" + context.getString(R.string.network_unreachable_settings_hint)
 }

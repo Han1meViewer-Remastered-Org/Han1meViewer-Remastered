@@ -40,12 +40,14 @@ import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRouteScreen
 import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRouteScreen
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsDestinationSpec
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsScaffold
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRouteScreen
 import com.yenaly.han1meviewer.ui.screen.account.AccountScreen
 import com.yenaly.han1meviewer.ui.viewmodel.CreatorCenterViewModel
 import com.yenaly.han1meviewer.ui.viewmodel.UserAccountViewModel
+import com.yenaly.han1meviewer.util.logScreenViewEvent
 import kotlinx.serialization.json.Json
 
 @Composable
@@ -67,6 +69,17 @@ fun MainNavHost(
 
     LaunchedEffect(destinationSpec) {
         destinationSpec?.let(onDestinationChanged)
+    }
+
+    // 主导航的屏幕埋点。此前只有 SettingsScaffold 和几个 Activity 会上报 screen_view，
+    // 首页/视频/搜索/预览这些真正的核心页面全都没上报，导致 GA4 的屏幕名维度绝大部分是 (not set)。
+    // 设置相关的目的地由 SettingsScaffold 自己上报，这里跳过，避免同一次导航重复计数。
+    LaunchedEffect(destinationSpec) {
+        val spec = destinationSpec ?: return@LaunchedEffect
+        val handledBySettingsScaffold =
+            SettingsDestinationSpec.fromDestination(backStackEntry?.destination) != null
+        if (handledBySettingsScaffold) return@LaunchedEffect
+        activity.logScreenViewEvent(spec.screenClassName)
     }
 
     NavHost(
@@ -116,6 +129,9 @@ fun MainNavHost(
                     )
                 },
                 onNavigateToVideo = onNavigateToVideo,
+                onNavigateToNetworkSettings = {
+                    navController.navigateSafely(NetworkSettingsRoute)
+                },
             )
         }
         composable<WatchHistoryRoute> {

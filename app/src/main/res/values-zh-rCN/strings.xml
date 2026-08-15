@@ -918,6 +918,8 @@
     <string name="home_error_server_unavailable">服务器暂时不可用，请稍后再试。</string>
     <string name="home_error_generic">页面加载失败，请检查网络连接后重试。</string>
     <string name="china_network_no_proxy_hint">检测到您可能正在使用中国大陆网络直连本站，且未检测到已启用代理/VPN。hanime 网站在中国大陆网络下通常无法直接连接，建议开启代理/VPN 后重试。</string>
+    <string name="network_unreachable_settings_hint">若一直连不上，可到「设置 → 网络」里开启「内置 Hosts」，或改用其他镜像站点。</string>
+    <string name="go_to_network_settings">前往网络设置</string>
     <string name="backup_export_title">导出数据备份</string>
     <string name="backup_export_summary">导出设置、观看历史、下载分组与影片信息、H 关键帧与打卡记录，方便换机还原</string>
     <string name="backup_import_title">导入数据备份</string>
