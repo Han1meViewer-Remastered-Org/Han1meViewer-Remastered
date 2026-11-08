@@ -13,6 +13,10 @@ import com.yenaly.han1meviewer.logic.model.DownloadedNode
  * @param displayGroups 用于 UI 展示的分组列表（默认分组名已替换）
  * @param currentPage 当前选中的 Tab 索引 (0=下载中, 1=已下载)
  * @param showCreateGroupDialog 是否显示新建分组对话框
+ * @param multiSelectMode 是否处于多选模式
+ * @param selectedVideoIds 多选模式下已选中的视频 ID 集合
+ * @param isSearchVisible 是否显示已下载搜索框
+ * @param searchQuery 已下载搜索关键词
  */
 data class DownloadUiState(
     val downloadingItems: List<HanimeDownloadEntity> = emptyList(),
@@ -22,6 +26,8 @@ data class DownloadUiState(
     val showCreateGroupDialog: Boolean = false,
     val multiSelectMode: Boolean = false,
     val selectedVideoIds: Set<Int> = emptySet(),
+    val isSearchVisible: Boolean = false,
+    val searchQuery: String = "",
 )
 
 /**
@@ -96,4 +102,10 @@ sealed interface DownloadEvent {
 
     /** 多选模式下打开批量移动分组选择 */
     data object OnBatchMoveRequest : DownloadEvent
+
+    /** 切换已下载搜索框显示/隐藏 */
+    data object OnToggleSearch : DownloadEvent
+
+    /** 更新已下载搜索关键词 */
+    data class OnSearchQueryChange(val query: String) : DownloadEvent
 }

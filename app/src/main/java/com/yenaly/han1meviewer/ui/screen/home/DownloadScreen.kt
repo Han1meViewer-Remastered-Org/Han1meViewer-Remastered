@@ -1,15 +1,31 @@
 package com.yenaly.han1meviewer.ui.screen.home
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -23,17 +39,25 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.download.DownloadGroupEntity
 import com.yenaly.han1meviewer.logic.entity.download.HanimeDownloadEntity
 import com.yenaly.han1meviewer.logic.entity.download.VideoWithCategories
 import com.yenaly.han1meviewer.logic.model.DownloadHeaderNode
-import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
+import com.yenaly.han1meviewer.logic.model.DownloadItemNode
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
+import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.screen.home.download.DownloadEvent
 import com.yenaly.han1meviewer.ui.screen.home.download.DownloadUiState
@@ -53,7 +77,7 @@ import kotlinx.coroutines.launch
  * 下载页面 Screen 层。
  *
  * 接收数据流和 [DownloadEvent] 回调，管理 Tab、分组展开等 UI 编排状态。
- * 本地 UI 事件（Tab 切换、分组折叠）由 Screen 处理；业务事件透传给 Route。
+ * 本地 UI 事件（Tab 切换、分组折叠、已下载搜索）由 Screen 处理；业务事件透传给 Route。
  * Content 组件仅接收 UiState + Event 回调。
  *
  * @param downloadingFlow 下载中任务流
@@ -82,36 +106,65 @@ fun DownloadScreen(
     var downloadedGroupExpandedState by rememberSaveable(stateSaver = stringBooleanMapSaver()) {
         mutableStateOf(emptyMap())
     }
+    var searchGroupExpandedState by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     val downloadedLazyListState = rememberSaveable(saver = LazyListState.Saver) {
         LazyListState()
     }
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var showCreateGroupDialog by remember { mutableStateOf(false) }
-    var downloadedHeaderNodes by remember { mutableStateOf<List<DownloadHeaderNode>>(emptyList()) }
     var multiSelectMode by remember { mutableStateOf(false) }
     var selectedVideoIds by remember { mutableStateOf(setOf<Int>()) }
     var pendingBatchMove by remember { mutableStateOf(false) }
     var pendingBatchMoveConfirm by remember { mutableStateOf<Pair<List<VideoWithCategories>, Int>?>(null) }
+    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     val displayGroups = downloadedGroups.toDisplayGroups()
 
-    val downloadedNodes =
-        remember(downloadedItems, displayGroups, collapseDownloadedGroup, downloadedHeaderNodes, downloadedGroupExpandedState) {
+    val filteredDownloadedItems = remember(downloadedItems, displayGroups, searchQuery) {
+        val keyword = searchQuery.trim()
+        if (keyword.isEmpty()) {
+            downloadedItems
+        } else {
             val groupIdToNameMap = displayGroups.associate { it.id to it.name }
-            if (downloadedItems.isEmpty()) {
-                downloadedHeaderNodes = emptyList()
+            downloadedItems.filter { item ->
+                item.video.title.contains(keyword, ignoreCase = true) ||
+                        item.video.videoCode.contains(keyword, ignoreCase = true) ||
+                        item.video.quality.contains(keyword, ignoreCase = true) ||
+                        groupIdToNameMap[item.video.groupId]?.contains(keyword, ignoreCase = true) == true
+            }
+        }
+    }
+
+    val isSearching = searchQuery.isNotBlank()
+
+    val downloadedNodes =
+        remember(
+            filteredDownloadedItems,
+            displayGroups,
+            collapseDownloadedGroup,
+            downloadedGroupExpandedState,
+            searchGroupExpandedState,
+            isSearching,
+        ) {
+            val groupIdToNameMap = displayGroups.associate { it.id to it.name }
+            if (filteredDownloadedItems.isEmpty()) {
                 emptyList()
             } else {
                 val newHeaders =
-                    downloadedItems.toNodeList(groupIdToNameMap, collapseDownloadedGroup)
-                downloadedHeaderNodes = newHeaders.map { newHeader ->
+                    filteredDownloadedItems.toNodeList(groupIdToNameMap, collapseDownloadedGroup)
+                newHeaders.map { newHeader ->
                     newHeader.copy(
-                        isExpanded = downloadedGroupExpandedState[newHeader.groupKey]
-                            ?: downloadedHeaderNodes.firstOrNull { it.groupKey == newHeader.groupKey }?.isExpanded
-                            ?: !collapseDownloadedGroup
+                        isExpanded = if (isSearching) {
+                            searchGroupExpandedState[newHeader.groupKey] ?: true
+                        } else {
+                            downloadedGroupExpandedState[newHeader.groupKey]
+                                ?: !collapseDownloadedGroup
+                        }
                     )
-                }
-                downloadedHeaderNodes.toFlatNodeList()
+                }.toFlatNodeList()
             }
         }
 
@@ -123,20 +176,23 @@ fun DownloadScreen(
         showCreateGroupDialog = showCreateGroupDialog,
         multiSelectMode = multiSelectMode,
         selectedVideoIds = selectedVideoIds,
+        isSearchVisible = isSearchVisible,
+        searchQuery = searchQuery,
     )
 
     val handleEvent: (DownloadEvent) -> Unit = { event ->
         when (event) {
             // 本地 UI 事件：Screen 自行处理
             is DownloadEvent.OnToggleGroup -> {
-                downloadedHeaderNodes = downloadedHeaderNodes.map {
-                    if (it.groupKey == event.groupKey) {
-                        val expanded = !it.isExpanded
-                        downloadedGroupExpandedState = downloadedGroupExpandedState + (it.groupKey to expanded)
-                        it.copy(isExpanded = expanded)
-                    } else {
-                        it
-                    }
+                val currentHeader = downloadedNodes
+                    .filterIsInstance<DownloadHeaderNode>()
+                    .firstOrNull { it.groupKey == event.groupKey }
+                val currentExpanded = currentHeader?.isExpanded ?: !collapseDownloadedGroup
+                val expanded = !currentExpanded
+                if (isSearching) {
+                    searchGroupExpandedState = searchGroupExpandedState + (event.groupKey to expanded)
+                } else {
+                    downloadedGroupExpandedState = downloadedGroupExpandedState + (event.groupKey to expanded)
                 }
             }
             is DownloadEvent.OnCreateGroupDialogChange -> showCreateGroupDialog = event.visible
@@ -156,7 +212,7 @@ fun DownloadScreen(
                 }
             }
             is DownloadEvent.OnSelectAllCurrentGroup -> {
-                val groupVideos = downloadedNodes.filterIsInstance<com.yenaly.han1meviewer.logic.model.DownloadItemNode>()
+                val groupVideos = downloadedNodes.filterIsInstance<DownloadItemNode>()
                     .filter { it.parentKey == event.groupKey }
                 selectedVideoIds = if (event.select) {
                     selectedVideoIds + groupVideos.map { it.data.video.id }.toSet()
@@ -165,9 +221,33 @@ fun DownloadScreen(
                 }
             }
             is DownloadEvent.OnBatchMoveRequest -> { pendingBatchMove = true }
+            is DownloadEvent.OnToggleSearch -> {
+                isSearchVisible = !isSearchVisible
+                if (!isSearchVisible) {
+                    searchQuery = ""
+                    searchGroupExpandedState = emptyMap()
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                }
+            }
+            is DownloadEvent.OnSearchQueryChange -> {
+                searchQuery = event.query
+                searchGroupExpandedState = emptyMap()
+            }
             // 业务事件：透传给 Route
             else -> onEvent(event)
         }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage != 1 && isSearchVisible) {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+        }
+    }
+
+    BackHandler(enabled = uiState.currentPage == 1 && isSearchVisible && !multiSelectMode) {
+        handleEvent(DownloadEvent.OnToggleSearch)
     }
 
     LaunchedEffect(Unit) {
@@ -199,6 +279,14 @@ fun DownloadScreen(
                 }
             } else {
                 if (!uiState.multiSelectMode) {
+                    FilledIconButton(
+                        onClick = { handleEvent(DownloadEvent.OnToggleSearch) }
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_baseline_search_24),
+                            contentDescription = stringResource(R.string.search),
+                        )
+                    }
                     FilledIconButton(
                         onClick = { handleEvent(DownloadEvent.OnToggleMultiSelect) }
                     ) {
@@ -232,6 +320,21 @@ fun DownloadScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            AnimatedVisibility(
+                visible = uiState.currentPage == 1 && uiState.isSearchVisible,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                DownloadedSearchBar(
+                    query = uiState.searchQuery,
+                    onQueryChange = { handleEvent(DownloadEvent.OnSearchQueryChange(it)) },
+                    onClose = { handleEvent(DownloadEvent.OnToggleSearch) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
             PrimaryTabRow(selectedTabIndex = uiState.currentPage) {
                 Tab(
                     selected = uiState.currentPage == 0,
@@ -269,7 +372,7 @@ fun DownloadScreen(
 
     if (pendingBatchMove) {
         val selectedVideos = downloadedNodes
-            .filterIsInstance<com.yenaly.han1meviewer.logic.model.DownloadItemNode>()
+            .filterIsInstance<DownloadItemNode>()
             .filter { it.data.video.id in selectedVideoIds }
             .map { it.data }
         if (selectedVideos.isNotEmpty()) {
@@ -304,6 +407,65 @@ fun DownloadScreen(
             onDismiss = { pendingBatchMoveConfirm = null },
         )
     }
+}
+
+@Composable
+private fun DownloadedSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        runCatching { focusRequester.requestFocus() }
+    }
+
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier.focusRequester(focusRequester),
+        placeholder = { Text(stringResource(R.string.search_video_hint)) },
+        leadingIcon = {
+            Icon(imageVector = Icons.Default.Search, contentDescription = null)
+        },
+        trailingIcon = {
+            IconButton(
+                onClick = {
+                    if (query.isNotEmpty()) {
+                        onQueryChange("")
+                    } else {
+                        onClose()
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(
+                        if (query.isNotEmpty()) R.string.clear_search_query else R.string.close
+                    ),
+                )
+            }
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                focusManager.clearFocus()
+                keyboardController?.hide()
+            }
+        ),
+        shape = RoundedCornerShape(28.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedBorderColor = Color.Transparent,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+        ),
+    )
 }
 
 @Preview(showBackground = true)

@@ -106,10 +106,16 @@ fun DownloadedScreen(
 
     if (uiState.downloadedNodes.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            EmptyContent(
-                hint = stringResource(R.string.empty_content),
-                subHint = stringResource(R.string.downloaded),
-            )
+            if (uiState.searchQuery.isNotBlank()) {
+                EmptyContent(
+                    hint = stringResource(R.string.search_no_results),
+                )
+            } else {
+                EmptyContent(
+                    hint = stringResource(R.string.empty_content),
+                    subHint = stringResource(R.string.downloaded),
+                )
+            }
         }
         return
     }

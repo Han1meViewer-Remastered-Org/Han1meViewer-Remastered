@@ -118,7 +118,9 @@ fun DownloadRouteScreen(
             is DownloadEvent.OnToggleMultiSelect,
             is DownloadEvent.OnToggleVideoSelection,
             is DownloadEvent.OnSelectAllCurrentGroup,
-            is DownloadEvent.OnBatchMoveRequest -> Unit
+            is DownloadEvent.OnBatchMoveRequest,
+            is DownloadEvent.OnToggleSearch,
+            is DownloadEvent.OnSearchQueryChange -> Unit
         }
     }
 
