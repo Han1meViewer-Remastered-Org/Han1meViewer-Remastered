@@ -1,5 +1,7 @@
 # 🔱 Han1meViewer-Remastered
 
+> ℹ️ 本仓库是主仓库 [`5APU-A340/Han1meViewer-Remastered`](https://github.com/5APU-A340/Han1meViewer-Remastered) 的临时镜像，仅同步最新版本（v1.1.5）源码与预编译产物；应用内更新检测已内置自动切换逻辑，主仓库恢复访问后会自动优先使用，无需任何操作。
+
 本仓库是 [misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer) 的社区续作。
 
 ## 为什么会有这个仓库
