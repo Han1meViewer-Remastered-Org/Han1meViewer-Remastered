@@ -1,6 +1,6 @@
 [versions]
 # Plugins
-aboutlibraries = "14.2.0"
+aboutlibraries = "15.0.4"
 androidGradle = "9.2.1"
 biometric = "1.1.0"
 coilCompose = "3.4.0"
