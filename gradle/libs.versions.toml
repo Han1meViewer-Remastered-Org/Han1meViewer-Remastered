@@ -14,7 +14,7 @@ drawerlayout = "1.2.0"
 safeargs = "2.9.8"
 # Dependencies
 about = "2.5.2"
-coreKtx = "1.18.0"
+coreKtx = "1.19.0"
 appcompat = "1.7.1"
 material = "1.14.0"
 coroutinesAndroid = "1.11.0"
