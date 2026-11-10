@@ -129,7 +129,7 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 
 ## 💬 参与讨论
 
-Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
+原项目Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)，本重制版项目暂不设置任何讨论群组，若有需求或问题请在Issues中反馈。
 
 ## ✨ 功能概览
 
@@ -153,13 +153,17 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 
 ## 📷 截图预览
 
-![readme0](readme_01.png) ![readme1](readme_02.png)
+不提供截图预览。
 
-![readme2](readme_03.png) ![readme3](readme_04.png)
+## 📈 Star 趋势
 
-![readme4](readme_05.png) ![readme5](readme_06.png)
-
-![readme6](readme_07.png)
+<a href="https://www.star-history.com/?repos=Han1meViewer-Remastered-Org%2FHan1meViewer-Remastered&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Han1meViewer-Remastered-Org/Han1meViewer-Remastered&type=date&theme=dark&legend=top-left&sealed_token=LYqGGR__6aLYhUZje2CyrJ2PSbCDTwykI8GeEnwI-xZrYE4R2YY3UAl-ku43dUjeSw6eJsNW_VEO8GgZQx9FM6-jS5X25bNHRzcrKn9Lj-CeYra0g23r9E6nSUI-41ya1EeYvrDcUlkCArtpKgJC-AaHkDe0UqSGCCkWXva9oJfQo_yQtyaGt-mS16r6" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Han1meViewer-Remastered-Org/Han1meViewer-Remastered&type=date&legend=top-left&sealed_token=LYqGGR__6aLYhUZje2CyrJ2PSbCDTwykI8GeEnwI-xZrYE4R2YY3UAl-ku43dUjeSw6eJsNW_VEO8GgZQx9FM6-jS5X25bNHRzcrKn9Lj-CeYra0g23r9E6nSUI-41ya1EeYvrDcUlkCArtpKgJC-AaHkDe0UqSGCCkWXva9oJfQo_yQtyaGt-mS16r6" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Han1meViewer-Remastered-Org/Han1meViewer-Remastered&type=date&legend=top-left&sealed_token=LYqGGR__6aLYhUZje2CyrJ2PSbCDTwykI8GeEnwI-xZrYE4R2YY3UAl-ku43dUjeSw6eJsNW_VEO8GgZQx9FM6-jS5X25bNHRzcrKn9Lj-CeYra0g23r9E6nSUI-41ya1EeYvrDcUlkCArtpKgJC-AaHkDe0UqSGCCkWXva9oJfQo_yQtyaGt-mS16r6" />
+ </picture>
+</a>
 
 ## 🤝 参与贡献
 
