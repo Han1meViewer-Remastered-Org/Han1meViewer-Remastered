@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.screen.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -23,18 +24,13 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -56,6 +52,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -74,6 +72,7 @@ import com.yenaly.han1meviewer.logic.model.OnlineWatchHistorySort
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
+import com.yenaly.han1meviewer.ui.component.PopupSearchBar
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
 import com.yenaly.han1meviewer.ui.component.PageContent
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
@@ -124,8 +123,21 @@ fun WatchHistoryTabScreen(
     val currentOnlineIsLoadingMore by onlineIsLoadingMore.collectAsState()
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteAllLocalDialog by rememberSaveable { mutableStateOf(false) }
+    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
     var localSearchQuery by rememberSaveable { mutableStateOf("") }
     var onlineSearchQuery by rememberSaveable { mutableStateOf("") }
+    val showWatchHistorySearch = Preferences.rememberBooleanPreference(
+        SettingsPreferenceKeys.SHOW_WATCH_HISTORY_SEARCH, true
+    )
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val closeSearch: () -> Unit = {
+        isSearchVisible = false
+        localSearchQuery = ""
+        onlineSearchQuery = ""
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
     val filteredLocalHistories = remember(localHistories, localSearchQuery) {
         if (localSearchQuery.isBlank()) {
             localHistories
@@ -151,6 +163,14 @@ fun WatchHistoryTabScreen(
         if (pagerState.currentPage == 1 && currentOnlineItems.isEmpty() && currentOnlineLoadedPageCount == 0 && currentOnlineState is PageLoadingState.Loading) {
             onRefreshOnline(currentOnlineSort)
         }
+        if (isSearchVisible) {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+        }
+    }
+
+    BackHandler(enabled = isSearchVisible) {
+        closeSearch()
     }
 
     ConfirmDialog(
@@ -180,6 +200,22 @@ fun WatchHistoryTabScreen(
         title = stringResource(R.string.watch_history),
         onBack = onBack,
         actions = {
+            if (showWatchHistorySearch) {
+                FilledIconButton(
+                    onClick = {
+                        if (isSearchVisible) {
+                            closeSearch()
+                        } else {
+                            isSearchVisible = true
+                        }
+                    }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_baseline_search_24),
+                        contentDescription = stringResource(R.string.search),
+                    )
+                }
+            }
             FilledIconButton(onClick = { showHelpDialog = true }) {
                 Icon(
                     painter = painterResource(R.drawable.ic_baseline_help_24),
@@ -204,6 +240,23 @@ fun WatchHistoryTabScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
+            PopupSearchBar(
+                visible = showWatchHistorySearch && isSearchVisible,
+                query = if (pagerState.currentPage == 0) localSearchQuery else onlineSearchQuery,
+                onQueryChange = {
+                    if (pagerState.currentPage == 0) localSearchQuery = it else onlineSearchQuery = it
+                },
+                onClose = closeSearch,
+                placeholder = stringResource(R.string.watch_history_search_hint),
+                supportingText = if (pagerState.currentPage == 1 &&
+                    onlineSearchQuery.isNotBlank() &&
+                    currentOnlineState !is PageLoadingState.NoMoreData
+                ) {
+                    stringResource(R.string.search_scope_hint_loaded_only)
+                } else {
+                    null
+                },
+            )
             PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
                 Tab(
                     selected = pagerState.currentPage == 0,
@@ -217,27 +270,11 @@ fun WatchHistoryTabScreen(
                 )
             }
 
-            val showWatchHistorySearch = Preferences.rememberBooleanPreference(
-                SettingsPreferenceKeys.SHOW_WATCH_HISTORY_SEARCH, true
-            )
-            if (showWatchHistorySearch) {
-                WatchHistorySearchBar(
-                    query = if (pagerState.currentPage == 0) localSearchQuery else onlineSearchQuery,
-                    onQueryChange = {
-                        if (pagerState.currentPage == 0) localSearchQuery = it else onlineSearchQuery = it
-                    },
-                    showLoadedOnlyHint = pagerState.currentPage == 1 &&
-                        onlineSearchQuery.isNotBlank() &&
-                        currentOnlineState !is PageLoadingState.NoMoreData,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
             ) { page ->
                 when (page) {
                     0 -> WatchHistoryScreen(
@@ -249,6 +286,7 @@ fun WatchHistoryTabScreen(
                         useScaffold = false,
                         showHelpAction = false,
                         showDeleteAllAction = false,
+                        searchNoResults = localSearchQuery.isNotBlank() && localHistories.isNotEmpty(),
                     )
 
                     else -> OnlineWatchHistoryScreen(
@@ -292,6 +330,7 @@ fun WatchHistoryScreen(
         useScaffold = useScaffold,
         showHelpAction = showHelpAction,
         showDeleteAllAction = showDeleteAllAction,
+        searchNoResults = false,
     )
 }
 
@@ -305,6 +344,7 @@ private fun WatchHistoryScreen(
     useScaffold: Boolean,
     showHelpAction: Boolean,
     showDeleteAllAction: Boolean,
+    searchNoResults: Boolean = false,
 ) {
     var pendingDelete by remember { mutableStateOf<WatchHistoryEntity?>(null) }
     var showDeleteAllDialog by rememberSaveable { mutableStateOf(false) }
@@ -355,8 +395,15 @@ private fun WatchHistoryScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 EmptyContent(
-                    hint = stringResource(R.string.watch_history_empty_title),
-                    subHint = stringResource(R.string.watch_history_empty_description),
+                    hint = stringResource(
+                        if (searchNoResults) R.string.search_no_results
+                        else R.string.watch_history_empty_title
+                    ),
+                    subHint = if (searchNoResults) {
+                        ""
+                    } else {
+                        stringResource(R.string.watch_history_empty_description)
+                    },
                 )
             }
         } else {
@@ -535,7 +582,7 @@ private fun OnlineWatchHistoryScreen(
             PageContent(
                 isLoading = state is PageLoadingState.Loading && items.isEmpty(),
                 isError = state is PageLoadingState.Error,
-                isEmpty = state is PageLoadingState.NoMoreData && items.isEmpty(),
+                isEmpty = !isSearching && state is PageLoadingState.NoMoreData && items.isEmpty(),
                 onRetry = { onRefresh(sort) },
                 error = {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -554,16 +601,22 @@ private fun OnlineWatchHistoryScreen(
                     }
                 },
             ) {
-                OnlineWatchHistoryGrid(
-                    items = items,
-                    gridState = gridState,
-                    loadedPageCount = loadedPageCount,
-                    state = state,
-                    isLoadingMore = isLoadingMore,
-                    snackbarHostState = snackbarHostState,
-                    onOpenVideo = onOpenVideo,
-                    onDeleteVideo = { pendingDelete = it },
-                )
+                if (isSearching && items.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        EmptyContent(hint = stringResource(R.string.search_no_results))
+                    }
+                } else {
+                    OnlineWatchHistoryGrid(
+                        items = items,
+                        gridState = gridState,
+                        loadedPageCount = loadedPageCount,
+                        state = state,
+                        isLoadingMore = isLoadingMore,
+                        snackbarHostState = snackbarHostState,
+                        onOpenVideo = onOpenVideo,
+                        onDeleteVideo = { pendingDelete = it },
+                    )
+                }
             }
         }
     }
@@ -636,46 +689,6 @@ private fun LazyGridState.canLoadMore(
     }
     val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: return false
     return lastVisible >= layoutInfo.totalItemsCount - 4
-}
-
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-private fun WatchHistorySearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    showLoadedOnlyHint: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier,
-        placeholder = { Text(stringResource(R.string.watch_history_search_hint)) },
-        leadingIcon = {
-            Icon(imageVector = Icons.Default.Search, contentDescription = null)
-        },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.clear_search_query),
-                    )
-                }
-            }
-        },
-        supportingText = if (showLoadedOnlyHint) {
-            { Text(stringResource(R.string.search_scope_hint_loaded_only)) }
-        } else null,
-        singleLine = true,
-        shape = RoundedCornerShape(28.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-        ),
-    )
 }
 
 @Composable

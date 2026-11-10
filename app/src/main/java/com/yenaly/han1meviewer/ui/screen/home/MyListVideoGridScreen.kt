@@ -1,21 +1,14 @@
 package com.yenaly.han1meviewer.ui.screen.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -31,11 +24,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.R
@@ -43,6 +36,7 @@ import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
+import com.yenaly.han1meviewer.ui.component.PopupSearchBar
 import com.yenaly.han1meviewer.ui.component.PageContent
 import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
@@ -97,7 +91,19 @@ fun VideoGridScreen(
     var pendingDelete by remember { mutableStateOf<HanimeInfo?>(null) }
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var pendingRefresh by rememberSaveable { mutableStateOf(false) }
+    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    val showMyListSearch = Preferences.rememberBooleanPreference(
+        SettingsPreferenceKeys.SHOW_MY_LIST_SEARCH, true
+    )
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val closeSearch: () -> Unit = {
+        isSearchVisible = false
+        searchQuery = ""
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
     val deleteFailedText = stringResource(R.string.delete_failed)
     val deleteSuccessText = stringResource(R.string.delete_success)
     val filteredItems = remember(items, searchQuery) {
@@ -156,6 +162,10 @@ fun VideoGridScreen(
         onDismiss = { pendingDelete = null },
     )
 
+    BackHandler(enabled = isSearchVisible) {
+        closeSearch()
+    }
+
     ConfirmDialog(
         visible = showHelpDialog,
         title = stringResource(R.string.help),
@@ -188,6 +198,22 @@ fun VideoGridScreen(
         },
         onBack = onBack,
         actions = {
+            if (showMyListSearch) {
+                FilledIconButton(
+                    onClick = {
+                        if (isSearchVisible) {
+                            closeSearch()
+                        } else {
+                            isSearchVisible = true
+                        }
+                    }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_baseline_search_24),
+                        contentDescription = stringResource(R.string.search),
+                    )
+                }
+            }
             FilledIconButton(onClick = { showHelpDialog = true }) {
                 Icon(
                     painter = painterResource(R.drawable.ic_baseline_help_24),
@@ -202,19 +228,18 @@ fun VideoGridScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            val showMyListSearch = Preferences.rememberBooleanPreference(
-                SettingsPreferenceKeys.SHOW_MY_LIST_SEARCH, true
+            PopupSearchBar(
+                visible = showMyListSearch && isSearchVisible,
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                onClose = closeSearch,
+                placeholder = stringResource(R.string.search_video_hint),
+                supportingText = if (searchQuery.isNotBlank() && state !is PageLoadingState.NoMoreData) {
+                    stringResource(R.string.search_scope_hint_loaded_only)
+                } else {
+                    null
+                },
             )
-            if (showMyListSearch && (items.isNotEmpty() || searchQuery.isNotBlank())) {
-                MyListSearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    showLoadedOnlyHint = searchQuery.isNotBlank() && state !is PageLoadingState.NoMoreData,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
             PullToRefreshBox(
                 isRefreshing = refreshing,
                 state = refreshingState,
@@ -267,46 +292,6 @@ fun VideoGridScreen(
             }
         }
     }
-}
-
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-private fun MyListSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    showLoadedOnlyHint: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier,
-        placeholder = { Text(stringResource(R.string.search_video_hint)) },
-        leadingIcon = {
-            Icon(imageVector = Icons.Default.Search, contentDescription = null)
-        },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.clear_search_query),
-                    )
-                }
-            }
-        },
-        supportingText = if (showLoadedOnlyHint) {
-            { Text(stringResource(R.string.search_scope_hint_loaded_only)) }
-        } else null,
-        singleLine = true,
-        shape = RoundedCornerShape(28.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            unfocusedBorderColor = Color.Transparent,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-        ),
-    )
 }
 
 @Preview(showBackground = true, widthDp = 420, heightDp = 900)
