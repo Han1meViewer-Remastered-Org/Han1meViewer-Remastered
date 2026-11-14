@@ -1,5 +1,5 @@
 permissions:
-  contents: read
+  contents: write
 name: CI
 
 on:
@@ -58,3 +58,23 @@ jobs:
         with:
           name: app-release-${{ github.sha }}
           path: app/build/outputs/apk/release/Han1meViewer-v*.apk
+
+      # Actions 产物 zip 匿名下载会 401。预发布标签上的 APK 公开可下，应用走这条。
+      - name: Publish CI packages for anonymous download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          src=app/build/outputs/apk/release
+          stage=$(mktemp -d)
+          for abi in arm64-v8a armeabi-v7a x86 x86_64 universal; do
+            match=$(find "$src" -maxdepth 1 -name "Han1meViewer-v*-${abi}.apk" -print -quit)
+            test -n "$match"
+            cp "$match" "$stage/Han1meViewer-${abi}.apk"
+          done
+          if gh release view ci >/dev/null 2>&1; then
+            gh release edit ci --target "$GITHUB_SHA" --title "CI $GITHUB_SHA" --notes "$GITHUB_SHA" --prerelease
+          else
+            gh release create ci --target "$GITHUB_SHA" --title "CI $GITHUB_SHA" --notes "$GITHUB_SHA" --prerelease
+          fi
+          gh release upload ci "$stage"/Han1meViewer-*.apk --clobber

@@ -31,6 +31,12 @@ object HUpdater {
     const val DEFAULT_BRANCH = "main"
 
     /**
+     * 每次 CI 成功后会把各架构 APK 覆盖发布到这个预发布标签。
+     * 正文是对应的完整 commit sha，用来确认包和这次构建是同一份。
+     */
+    const val CI_RELEASE_TAG = "ci"
+
+    /**
      * Regex to match multiple line feeds to a single line feed
      */
     private val linefeedRegex = Regex("\\n{2,}")
@@ -68,13 +74,24 @@ object HUpdater {
         val workflowRun = service.getWorkflowRuns().workflowRuns.firstOrNull() ?: return null
         val shortSha = workflowRun.headSha.take(7)
         if (shortSha == curSha) return null
-        val artifacts = service.getArtifacts(workflowRun.artifactsUrl)
         val changelog = runSuspendCatching {
             service.getCommitComparison(
                 curSha = curSha,
                 latestSha = shortSha,
             ).commits.toChangelogPrettyString()
         }.getOrNull() ?: workflowRun.title
+        val releaseAsset = runSuspendCatching { service.getReleaseByTag(CI_RELEASE_TAG) }
+            .getOrNull()
+            ?.takeIf { it.body.trim() == workflowRun.headSha }
+            ?.pickBestApkAsset()
+        if (releaseAsset != null) {
+            return Latest(
+                "$shortSha (CI)", changelog,
+                releaseAsset.browserDownloadURL, releaseAsset.nodeID,
+            )
+        }
+        // 旧的 CI 还没发布预发布包时才退回产物 zip。匿名下载会 401。
+        val artifacts = service.getArtifacts(workflowRun.artifactsUrl)
         return Latest("$shortSha (CI)", changelog, artifacts.downloadLink, artifacts.nodeId)
     }
 
@@ -130,24 +147,31 @@ object HUpdater {
     @OptIn(InternalCoroutinesApi::class)
     suspend fun File.injectUpdate(url: String, progress: (suspend (Int, Long, Long) -> Unit)? = null) {
         val res = HanimeNetwork.githubService.request(url)
+        if (!res.isSuccessful) {
+            val detail = res.errorBody()?.use { it.string() }
+                ?.lineSequence()?.firstOrNull()?.take(180).orEmpty()
+            throw java.io.IOException("HTTP ${res.code()} $detail".trim())
+        }
+        val body = res.body() ?: throw java.io.IOException("HTTP ${res.code()} empty body")
         // 响应头到了之后，读包体是阻塞的。任务一取消就关掉流，read 才能马上返回。
         currentCoroutineContext()[Job]?.invokeOnCompletion(onCancelling = true) { cause ->
-            if (cause != null) res.body()?.close()
+            if (cause != null) body.close()
         }
         if (url.endsWith("zip")) {
             Log.d(TAG, "Injecting update from zip ($url)")
-            val zipFile = File(parentFile, "update.zip")
+            // 外部存储上的 ZipFile 会 ENOENT。压缩包放进应用私有临时目录再解。
+            val zipFile = File(System.getProperty("java.io.tmpdir"), "hanime-update.zip")
             parentFile?.mkdirs()
             zipFile.delete()
-            res.body()?.use { body ->
-                body.byteStream().use { stream ->
-                    zipFile.outputStream().use { output ->
-                        Log.i(TAG, "content length: ${body.contentLength()}")
-                        stream.copyTo(output, body.contentLength(), progress = progress)
+            try {
+                body.use { payload ->
+                    payload.byteStream().use { stream ->
+                        zipFile.outputStream().use { output ->
+                            Log.i(TAG, "content length: ${payload.contentLength()}")
+                            stream.copyTo(output, payload.contentLength(), progress = progress)
+                        }
                     }
                 }
-            }
-            try {
                 zipFile.extractBestApk(this)
             } finally {
                 zipFile.delete()
@@ -155,12 +179,15 @@ object HUpdater {
         } else {
             Log.d(TAG, "Injecting update from release ($url)")
             parentFile?.mkdirs()
-            this.outputStream().use {
-                res.body()?.use { body ->
-                    Log.i(TAG, "content length: ${body.contentLength()}")
-                    body.byteStream().copyTo(it, body.contentLength(), progress = progress)
+            this.outputStream().use { output ->
+                body.use { payload ->
+                    Log.i(TAG, "content length: ${payload.contentLength()}")
+                    payload.byteStream().copyTo(output, payload.contentLength(), progress = progress)
                 }
             }
+        }
+        if (!exists() || length() <= 0L) {
+            throw java.io.IOException("Update package is empty")
         }
     }
 

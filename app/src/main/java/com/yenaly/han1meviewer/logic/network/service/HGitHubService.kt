@@ -24,6 +24,12 @@ interface HGitHubService {
     suspend fun getLatestVersion(): Release
 
     /**
+     * CI 通道的安装包放在预发布标签上。Actions 产物的 zip 匿名访问会 401。
+     */
+    @GET("releases/tags/{tag}")
+    suspend fun getReleaseByTag(@Path("tag") tag: String): Release
+
+    /**
      * 通过 GitHub Contents API 直接获取仓库根目录的 announcements.json 原文。
      *
      * 相比 raw.githubusercontent.com，走 api.github.com（应用已用固定 IP 的
