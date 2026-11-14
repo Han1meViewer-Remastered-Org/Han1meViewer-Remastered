@@ -7,6 +7,7 @@ import com.yenaly.han1meviewer.Preferences.isAlreadyLogin
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
 import com.yenaly.han1meviewer.logic.exception.HanimeNotFoundException
+import com.yenaly.han1meviewer.logic.exception.HttpResponseException
 import com.yenaly.han1meviewer.logic.exception.IPBlockedException
 import com.yenaly.han1meviewer.logic.exception.ParseException
 import com.yenaly.han1meviewer.logic.model.CommentPlace
@@ -628,19 +629,19 @@ object NetworkRepo {
                         throw CloudFlareBlockedException(getString(R.string.cloudflare_network_mismatch))
 
                     else ->
-                        throw HanimeNotFoundException(getString(R.string.video_might_not_exist)) // 主要出現在影片界面，當你v數不大時會報403
+                        throw HanimeNotFoundException(getString(R.string.video_might_not_exist), code)
                 }
-            } else throw IllegalStateException("$code ${message()}")
+            } else throw HttpResponseException(code, "$code ${message()}")
 
-            500 -> throw HanimeNotFoundException(getString(R.string.video_might_not_exist)) // 主要出現在影片界面，當你v數很大時會報500
+            500 -> throw HanimeNotFoundException(getString(R.string.video_might_not_exist), code)
 
             404 -> if (!isAlreadyLogin) {
-                throw IllegalStateException(getString(R.string.not_logged_in_currently))
+                throw HttpResponseException(code, getString(R.string.not_logged_in_currently))
             } else {
-                throw IllegalStateException("$code ${message()}")
+                throw HttpResponseException(code, "$code ${message()}")
             }
 
-            else -> throw IllegalStateException("$code ${message()}")
+            else -> throw HttpResponseException(code, "$code ${message()}")
         }
     }
 

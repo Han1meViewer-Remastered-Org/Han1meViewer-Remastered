@@ -5,4 +5,7 @@ package com.yenaly.han1meviewer.logic.exception
  * @author Yenaly Liew
  * @time 2023/08/07 007 13:08
  */
-class HanimeNotFoundException(reason: String) : RuntimeException(reason)
+class HanimeNotFoundException(
+    reason: String,
+    override val httpStatusCode: Int,
+) : RuntimeException(reason), HttpStatusProvider

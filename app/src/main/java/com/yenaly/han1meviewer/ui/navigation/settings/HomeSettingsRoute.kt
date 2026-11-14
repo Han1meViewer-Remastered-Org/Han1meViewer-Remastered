@@ -65,6 +65,7 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.saveHomeCategoryPreferenc
 import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.util.ThemeUtils
+import com.yenaly.han1meviewer.util.httpStatusCode
 import com.yenaly.han1meviewer.util.showToast
 import com.yenaly.yenaly_libs.ActivityManager
 import com.yenaly.yenaly_libs.utils.applicationContext
@@ -190,7 +191,14 @@ fun HomeSettingsRouteScreen(
 
     val updateSummary = remember(versionState, context) {
         when (versionState) {
-            is WebsiteState.Error -> checkUpdateFailed
+            is WebsiteState.Error -> {
+                val code = (versionState as WebsiteState.Error).throwable.httpStatusCode()
+                if (code == null) {
+                    checkUpdateFailed
+                } else {
+                    checkUpdateFailed + "\n" + context.getString(R.string.http_error_code, code)
+                }
+            }
             is WebsiteState.Loading -> checkingUpdate
             is WebsiteState.Success -> {
                 val info = (versionState as WebsiteState.Success).info

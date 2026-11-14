@@ -9,6 +9,8 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
+import com.yenaly.han1meviewer.logic.exception.HttpStatusProvider
+import retrofit2.HttpException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -165,7 +167,31 @@ fun Throwable.toNetworkErrorMessageRes(): Int {
  * 国内大陆网络在无代理/VPN 直连时对被墙站点通常表现为前者（DNS 污染、连接超时、连接重置），
  * 不会真的收到站点返回的 HTTP 响应，因此可以用这个区分作为"是否可能是被墙"的信号之一。
  */
+private val leadingHttpStatus = Regex("""^(\d{3})(?:\s|$)""")
+
+/**
+ * 从这次失败里取出 HTTP 状态码。
+ * 优先读请求异常上带的状态码，再看 Retrofit 的 [HttpException]，最后才从 "403 Forbidden" 这类文案开头识别。
+ */
+fun Throwable.httpStatusCode(): Int? {
+    var current: Throwable? = this
+    while (current != null) {
+        when (current) {
+            is HttpStatusProvider -> return current.httpStatusCode
+            is HttpException -> return current.code()
+        }
+        leadingHttpStatus.find(current.message.orEmpty())
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toIntOrNull()
+            ?.let { return it }
+        current = current.cause
+    }
+    return null
+}
+
 fun Throwable.isConnectionLevelFailure(): Boolean {
+    if (httpStatusCode() != null) return false
     val rawMessage = message.orEmpty().lowercase()
     return this is UnknownHostException || this is SocketTimeoutException ||
             this is ConnectException || this is SocketException ||
@@ -235,18 +261,25 @@ private fun isLikelyMainlandChinaNetwork(context: Context): Boolean {
  */
 fun Throwable.toNetworkErrorMessage(context: Context): String {
     val ownMessage = (this as? CloudFlareBlockedException)?.message
-    if (!ownMessage.isNullOrBlank()) return ownMessage
+    val text = if (!ownMessage.isNullOrBlank()) {
+        ownMessage
+    } else {
+        val connectionLevelFailure = isConnectionLevelFailure()
+        val primary = when {
+            connectionLevelFailure &&
+                    !isProxyOrVpnActive(context) &&
+                    isLikelyMainlandChinaNetwork(context) -> {
+                context.getString(R.string.china_network_no_proxy_hint)
+            }
 
-    val connectionLevelFailure = isConnectionLevelFailure()
-    val primary = when {
-        connectionLevelFailure &&
-                !isProxyOrVpnActive(context) &&
-                isLikelyMainlandChinaNetwork(context) -> {
-            context.getString(R.string.china_network_no_proxy_hint)
+            else -> context.getString(toNetworkErrorMessageRes())
         }
-
-        else -> context.getString(toNetworkErrorMessageRes())
+        if (connectionLevelFailure) {
+            primary + "\n\n" + context.getString(R.string.network_unreachable_settings_hint)
+        } else {
+            primary
+        }
     }
-    if (!connectionLevelFailure) return primary
-    return primary + "\n\n" + context.getString(R.string.network_unreachable_settings_hint)
+    val code = httpStatusCode() ?: return text
+    return text + "\n\n" + context.getString(R.string.http_error_code, code)
 }
