@@ -280,6 +280,31 @@ fun Throwable.toNetworkErrorMessage(context: Context): String {
             primary
         }
     }
-    val code = httpStatusCode() ?: return text
-    return text + "\n\n" + context.getString(R.string.http_error_code, code)
+    return toErrorCodeText(context) + "\n\n" + text
+}
+
+/**
+ * 这次请求的错误代码。服务器返回了状态码时显示 HTTP 403 这类代码；
+ * 连接在收到响应前就失败时，显示异常类型和原始信息，避免失败页上看不到任何代码。
+ */
+fun Throwable.toErrorCodeText(context: Context): String {
+    val status = httpStatusCode()
+    val label = if (status != null) {
+        "HTTP $status"
+    } else {
+        generateSequence(this) { it.cause }.last().javaClass.simpleName.ifBlank { javaClass.simpleName }
+    }
+    val line = context.getString(R.string.request_error_code, label)
+    if (status != null) return line
+    val detail = generateSequence(this) { it.cause }
+        .mapNotNull { throwable ->
+            throwable.message
+                ?.trim()
+                ?.lineSequence()
+                ?.firstOrNull()
+                ?.take(180)
+                ?.takeIf { it.isNotEmpty() }
+        }
+        .lastOrNull()
+    return if (detail.isNullOrBlank()) line else "$line\n$detail"
 }

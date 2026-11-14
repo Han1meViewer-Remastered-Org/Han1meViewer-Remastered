@@ -921,6 +921,7 @@
     <string name="network_unreachable_settings_hint">若一直连不上，可到「设置 → 网络」里开启「内置 Hosts」，或改用其他镜像站点。</string>
     <string name="go_to_network_settings">前往网络设置</string>
     <string name="http_error_code">HTTP 错误代码：%1$d</string>
+    <string name="request_error_code">错误代码：%1$s</string>
     <string name="backup_export_title">导出数据备份</string>
     <string name="backup_export_summary">导出设置、观看历史、下载分组与影片信息、H 关键帧与打卡记录，方便换机还原</string>
     <string name="backup_import_title">导入数据备份</string>
