@@ -1,8 +1,10 @@
 package com.yenaly.han1meviewer.util
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
+import android.os.Environment
 import android.text.method.LinkMovementMethod
 import android.text.util.Linkify
 import android.widget.TextView
@@ -20,7 +22,33 @@ import com.yenaly.yenaly_libs.utils.showShortToast
 import java.io.File
 import java.util.regex.Pattern
 
-val Context.updateFile: File get() = File(applicationContext.cacheDir, "update.apk")
+/**
+ * 安装包不能放 cache。安装器通过 FileProvider 打开时，缓存目录里的文件可能已经
+ * 被系统清掉，表现为 open failed: ENOENT。外部私有目录不会在安装器切到前台时被回收。
+ * CI 压缩包和发行页的直接 APK 都落到这一个文件，再交给安装器。
+ */
+val Context.updateFile: File
+    get() {
+        val dir = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            ?: applicationContext.filesDir
+        if (!dir.exists()) dir.mkdirs()
+        return File(dir, "update.apk")
+    }
+
+/**
+ * 系统安装器不一定是默认处理程序。只查询默认项时，原生安装器拿不到读取授权。
+ */
+private val KNOWN_INSTALLER_PACKAGES = listOf(
+    "com.android.packageinstaller",
+    "com.google.android.packageinstaller",
+    "com.samsung.android.packageinstaller",
+    "com.miui.packageinstaller",
+    "com.oplus.appdetail",
+    "com.oplus.safecenter",
+    "com.coloros.safecenter",
+    "com.rosan.installer.x",
+    "com.rosan.installer",
+)
 
 fun checkNeedUpdate(versionName: String): Boolean {
     // 首选：发布 tag 里携带的 `+versionCode`（如 v1.1.0-remastered+26072210），
@@ -123,15 +151,39 @@ internal fun Context.getUpdateIfExists(latest: Latest): File? {
     }
 }
 
+fun Context.buildInstallApkIntent(file: File): Intent {
+    val uri = FileProvider.getUriForFile(applicationContext, FILE_PROVIDER_AUTHORITY, file)
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        addCategory(Intent.CATEGORY_DEFAULT)
+        setDataAndType(uri, "application/vnd.android.package-archive")
+        clipData = ClipData.newRawUri(file.name, uri)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    // 通知里的 PendingIntent 是不可变的，系统不会再把 URI 授权转给安装器。
+    // 这里直接授给全部可处理的安装器，以及原生安装器包名（包可见性可能把它从查询结果里滤掉）。
+    val packages = linkedSetOf<String>()
+    packages += KNOWN_INSTALLER_PACKAGES
+    // 0：在 <queries> 可见范围内返回全部安装器，而不是只返回默认的那一个。
+    packageManager.queryIntentActivities(intent, 0).forEach { info ->
+        packages += info.activityInfo.packageName
+    }
+    val installPackage = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+        addCategory(Intent.CATEGORY_DEFAULT)
+        setDataAndType(uri, "application/vnd.android.package-archive")
+    }
+    packageManager.queryIntentActivities(installPackage, 0).forEach { info ->
+        packages += info.activityInfo.packageName
+    }
+    for (pkg in packages) {
+        grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    return intent
+}
+
 suspend fun Context.installApkPackage(file: File) {
     val canInstall = requestInstallPermission()
     if (canInstall) {
-        val uri = FileProvider.getUriForFile(this.applicationContext, FILE_PROVIDER_AUTHORITY, file)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            setDataAndType(uri, "application/vnd.android.package-archive")
-        }
-        startActivity(intent)
+        startActivity(buildInstallApkIntent(file))
     }
 }

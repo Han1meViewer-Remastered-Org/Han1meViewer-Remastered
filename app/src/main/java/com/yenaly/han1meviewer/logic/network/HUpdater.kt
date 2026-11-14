@@ -17,7 +17,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import okio.use
 import java.io.File
-import java.util.zip.ZipInputStream
+import java.util.zip.ZipFile
 
 /**
  * @project Han1meViewer
@@ -136,20 +136,25 @@ object HUpdater {
         }
         if (url.endsWith("zip")) {
             Log.d(TAG, "Injecting update from zip ($url)")
+            val zipFile = File(parentFile, "update.zip")
+            parentFile?.mkdirs()
+            zipFile.delete()
             res.body()?.use { body ->
                 body.byteStream().use { stream ->
-                    ZipInputStream(stream).use { zip ->
-                        zip.nextEntry
-                        this.outputStream().use {
-                            Log.i(TAG, "content length: ${body.contentLength()}")
-                            // 估摸着压缩率为0.56左右，稍微估算解压后大小，防止进度卡在100%时间过长
-                            zip.copyTo(it, (body.contentLength() * 1.79).toLong(), progress = progress)
-                        }
+                    zipFile.outputStream().use { output ->
+                        Log.i(TAG, "content length: ${body.contentLength()}")
+                        stream.copyTo(output, body.contentLength(), progress = progress)
                     }
                 }
             }
+            try {
+                zipFile.extractBestApk(this)
+            } finally {
+                zipFile.delete()
+            }
         } else {
             Log.d(TAG, "Injecting update from release ($url)")
+            parentFile?.mkdirs()
             this.outputStream().use {
                 res.body()?.use { body ->
                     Log.i(TAG, "content length: ${body.contentLength()}")
@@ -157,6 +162,33 @@ object HUpdater {
                 }
             }
         }
+    }
+
+    /**
+     * CI 产物是包含全部分架构包的 zip。按本机 ABI 挑一个，没有再退回 universal。
+     */
+    private fun File.extractBestApk(dest: File) {
+        ZipFile(this).use { zip ->
+            val entries = zip.entries().asSequence()
+                .filter { !it.isDirectory && it.name.endsWith(".apk", ignoreCase = true) }
+                .toList()
+            val chosenName = selectApkEntry(entries.map { it.name })
+                ?: throw java.io.IOException("Update archive has no apk")
+            val entry = entries.first { it.name == chosenName }
+            Log.i(TAG, "Extracting ${entry.name}")
+            zip.getInputStream(entry).use { input ->
+                dest.outputStream().use { output -> input.transferTo(output) }
+            }
+        }
+    }
+
+    private fun selectApkEntry(names: List<String>): String? {
+        for (abi in android.os.Build.SUPPORTED_ABIS) {
+            names.firstOrNull {
+                it.substringAfterLast('/').contains("-$abi.apk", ignoreCase = true)
+            }?.let { return it }
+        }
+        return names.firstOrNull { it.contains("universal", ignoreCase = true) } ?: names.firstOrNull()
     }
 
     /**

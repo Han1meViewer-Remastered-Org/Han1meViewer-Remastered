@@ -4,12 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.FileProvider
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import androidx.work.Constraints
@@ -23,12 +21,12 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.yenaly.han1meviewer.EMPTY_STRING
-import com.yenaly.han1meviewer.FILE_PROVIDER_AUTHORITY
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.UPDATE_NOTIFICATION_CHANNEL
 import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.logic.network.HUpdater
+import com.yenaly.han1meviewer.util.buildInstallApkIntent
 import com.yenaly.han1meviewer.util.installApkPackage
 import com.yenaly.han1meviewer.util.runSuspendCatching
 import com.yenaly.han1meviewer.util.updateFile
@@ -203,16 +201,7 @@ class HUpdateWorker(
 
     @SuppressLint("MissingPermission")
     private fun showInstallNotification(file: File) {
-        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-            val uri = FileProvider.getUriForFile(
-                context,
-                FILE_PROVIDER_AUTHORITY,
-                file
-            )
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        val installIntent = context.buildInstallApkIntent(file)
 
         val pendingIntent = PendingIntent.getActivity(
             context, 0, installIntent,
