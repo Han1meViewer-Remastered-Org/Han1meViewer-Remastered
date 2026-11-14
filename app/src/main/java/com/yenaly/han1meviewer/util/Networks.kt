@@ -280,7 +280,7 @@ fun Throwable.toNetworkErrorMessage(context: Context): String {
             primary
         }
     }
-    return toErrorCodeText(context) + "\n\n" + text
+    return text
 }
 
 /**

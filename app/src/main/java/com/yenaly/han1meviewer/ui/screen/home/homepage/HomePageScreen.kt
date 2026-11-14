@@ -40,6 +40,7 @@ import com.yenaly.han1meviewer.ui.component.isFirstPageLoading
 import com.yenaly.han1meviewer.ui.screen.home.homepage.component.HomePageTopBar
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
 import com.yenaly.han1meviewer.util.isConnectionLevelFailure
+import com.yenaly.han1meviewer.util.toErrorCodeText
 import com.yenaly.han1meviewer.util.toNetworkErrorMessage
 
 /**
@@ -120,6 +121,7 @@ fun HomePageScreen(
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             ErrorContent(
                                 message = errorThrowable?.toNetworkErrorMessage(context).orEmpty(),
+                                errorCode = errorThrowable?.toErrorCodeText(context),
                                 onRetry = { viewModel.getHomePage(isRefresh = false) },
                                 // 只在「压根连不上」时才给这个入口：内置 Hosts / 镜像站点是针对
                                 // DNS 污染、主域名被墙这类问题的，站点已经能应答的错误给了反而是噪音。

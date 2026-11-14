@@ -18,6 +18,7 @@ fun PageContent(
     modifier: Modifier = Modifier,
     loadingMessage: String = "",
     errorMessage: String = "",
+    errorCode: String? = null,
     onRetry: () -> Unit = {},
     loading: @Composable () -> Unit = {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -26,7 +27,7 @@ fun PageContent(
     },
     error: @Composable () -> Unit = {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            ErrorContent(message = errorMessage, onRetry = onRetry)
+            ErrorContent(message = errorMessage, errorCode = errorCode, onRetry = onRetry)
         }
     },
     empty: @Composable () -> Unit = {

@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.ui.component.content
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,10 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
+import com.yenaly.yenaly_libs.utils.copyToClipboard
+import com.yenaly.yenaly_libs.utils.showShortToast
 
 /**
  * 错误状态内容组件。
@@ -28,6 +33,7 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
  * @param modifier 修饰符
  * @param title 错误标题，默认为"加载失败"
  * @param message 错误详情，为 null 或空白时不显示
+ * @param errorCode 可点击复制的错误代码，为 null 或空白时不显示
  * @param onRetry 重试回调，为 null 时不显示重试按钮
  * @param secondaryActionText 次要操作按钮文案，与 [onSecondaryAction] 同时非空时才显示
  * @param onSecondaryAction 次要操作回调，用于给出比"重试"更进一步的排查入口（如跳转网络设置）
@@ -37,6 +43,7 @@ fun ErrorContent(
     modifier: Modifier = Modifier,
     title: String? = null,
     message: String? = null,
+    errorCode: String? = null,
     onRetry: (() -> Unit)? = null,
     retryText: String = stringResource(R.string.retry),
     secondaryActionText: String? = null,
@@ -59,11 +66,28 @@ fun ErrorContent(
             text = resolvedTitle,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.error,)
+        if (!errorCode.isNullOrBlank()) {
+            Text(
+                text = errorCode,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        errorCode.copyToClipboard()
+                        showShortToast(R.string.copy_to_clipboard)
+                    },
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    textDecoration = TextDecoration.Underline,
+                ),
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+            )
+        }
         if (!message.isNullOrBlank()) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
             )
         }
         if (onRetry != null) {
