@@ -3,6 +3,7 @@ package com.yenaly.han1meviewer.worker
 import android.util.Log
 import androidx.lifecycle.Observer
 import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.await
@@ -290,11 +291,46 @@ object HanimeDownloadManagerV2 {
                     HanimeDownloadWorker.DELETE to delete
                 )
             )
-        }.apply {
-            workManager.beginUniqueWork(
-                args.videoCode, ExistingWorkPolicy.REPLACE, this
-            ).enqueue().await()
+        }.also { request ->
+            enqueueWithoutOverlappingForeground(args.videoCode, request)
         }.id
+
+    /**
+     * 先等同一个番号上一次前台任务停干净，再入队。
+     *
+     * [ExistingWorkPolicy.REPLACE] 会在旧的 SystemForegroundService 还没 stopSelf 时又 startForeground，
+     * Android 14/15 上会抛 ForegroundServiceDidNotStopInTimeException。
+     */
+    private suspend fun enqueueWithoutOverlappingForeground(
+        videoCode: String,
+        request: OneTimeWorkRequest,
+    ) {
+        workManager.cancelUniqueWork(videoCode).await()
+        awaitUniqueWorkFinished(videoCode)
+        workManager.enqueueUniqueWork(videoCode, ExistingWorkPolicy.KEEP, request).await()
+    }
+
+    private suspend fun awaitUniqueWorkFinished(videoCode: String) {
+        suspendCancellableCoroutine { cont ->
+            val liveData = workManager.getWorkInfosForUniqueWorkLiveData(videoCode)
+            val observer = object : Observer<List<WorkInfo>> {
+                override fun onChanged(value: List<WorkInfo>) {
+                    if (value.isEmpty() || value.all { it.state.isFinished }) {
+                        liveData.removeObserver(this)
+                        if (cont.isActive) cont.resume(Unit)
+                    }
+                }
+            }
+            CoroutineScope(Dispatchers.Main).launch {
+                liveData.observeForever(observer)
+            }
+            cont.invokeOnCancellation {
+                CoroutineScope(Dispatchers.Main).launch {
+                    liveData.removeObserver(observer)
+                }
+            }
+        }
+    }
 
     /**
      * 取消正在执行的 WorkManager 任务

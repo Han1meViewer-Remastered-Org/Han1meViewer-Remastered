@@ -35,6 +35,7 @@ import com.yenaly.han1meviewer.util.updateFile
 import com.yenaly.yenaly_libs.utils.showShortToast
 import java.io.File
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlin.random.Random
 
 /**
@@ -69,9 +70,9 @@ class HUpdateWorker(
                 .setConstraints(constraints)
                 .setInputData(data)
                 .build()
+            // KEEP：已有更新任务在跑就不动它。REPLACE 会把还没停掉的前台服务再拉起来一次。
             WorkManager.getInstance(context)
-                .beginUniqueWork(TAG, ExistingWorkPolicy.REPLACE, req)
-                .enqueue()
+                .enqueueUniqueWork(TAG, ExistingWorkPolicy.KEEP, req)
         }
 
         /**
@@ -112,10 +113,17 @@ class HUpdateWorker(
         showDownloadNotification()
         with(HUpdater) {
             val file = context.updateFile.apply { delete() }
-            val inject = runSuspendCatching {
-                file.injectUpdate(downloadLink) { progress, fileSize, downloadedSize ->
-                    updateNotification(progress, fileSize, downloadedSize)
+            val inject = try {
+                runSuspendCatching {
+                    file.injectUpdate(downloadLink) { progress, fileSize, downloadedSize ->
+                        if (isStopped) throw CancellationException()
+                        setForeground(createForegroundInfo(progress))
+                        updateNotification(progress, fileSize, downloadedSize)
+                    }
                 }
+            } catch (e: CancellationException) {
+                cancelDownloadNotification()
+                throw e
             }
             if (inject.isSuccess) {
                 val outputData = workDataOf(UPDATE_APK to file.toUri().toString())
@@ -124,6 +132,10 @@ class HUpdateWorker(
                 showInstallNotification(file)
                 return Result.success(outputData)
             } else {
+                if (isStopped) {
+                    cancelDownloadNotification()
+                    throw CancellationException()
+                }
                 val error = inject.exceptionOrNull()
                 error?.printStackTrace()
                 file.delete()

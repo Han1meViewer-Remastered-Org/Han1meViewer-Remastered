@@ -38,11 +38,16 @@ import com.yenaly.yenaly_libs.utils.saveTo
 import com.yenaly.yenaly_libs.utils.showShortToast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.Call
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody
@@ -175,12 +180,21 @@ class HanimeDownloadWorker(
 
     private val downloadId = Random.nextInt()
 
+    /** 当前正在写入的请求。任务被取消时立刻 cancel，避免读流把前台服务拖过系统停服时限。 */
+    private val activeCall = java.util.concurrent.atomic.AtomicReference<Call?>(null)
+
     private val mainScope = CoroutineScope(Dispatchers.Main.immediate)
     private val dbScope = CoroutineScope(Dispatchers.IO)
 
+    @OptIn(InternalCoroutinesApi::class)
     override suspend fun doWork(): Result {
         if (fastPathCancel) return Result.success()
-        setForeground(createForegroundInfo())
+        // CoroutineWorker.coroutineContext 是被弃用的调度器，拿不到当前 Job。
+        // onCancelling 在任务刚被取消时就打断 OkHttp；等 Job 结束再 cancel 已经来不及，
+        // 阻塞中的 read 会把前台服务拖过系统停服时限。
+        currentCoroutineContext()[Job]?.invokeOnCompletion(onCancelling = true) { cause ->
+            if (cause != null) activeCall.get()?.cancel()
+        }
         return download()
     }
 
@@ -336,6 +350,10 @@ class HanimeDownloadWorker(
                 return@withContext Result.success()
             }
 
+            // 删文件、已下完、仅入队这些短路径不能占前台服务。
+            // 服务刚 startForeground 就结束，是 Android 14/15 DidNotStopInTime 的常见触发点。
+            setForeground(createForegroundInfo())
+
             var downloadedLength = entity.downloadedLength
             val needRange = downloadedLength > 0
             var raf: RandomAccessFile? = null
@@ -372,7 +390,9 @@ class HanimeDownloadWorker(
                     val requestBuilder = Request.Builder().url(downloadUrl).get()
                     if (requestNeedRange) requestBuilder.header("Range", "bytes=$downloadedLength-")
                     val request = requestBuilder.build()
-                    response = ServiceCreator.downloadClient.newCall(request).await()
+                    val call = ServiceCreator.downloadClient.newCall(request)
+                    activeCall.set(call)
+                    response = call.await()
                     val canWrite = (requestNeedRange && response.code == 206) || (!requestNeedRange && response.isSuccessful)
                     if (!canWrite) {
                         val reason = response.toDownloadErrorMessage(requestNeedRange)
@@ -391,6 +411,7 @@ class HanimeDownloadWorker(
 
                     try {
                         while (len != -1) {
+                            if (isStopped) throw CancellationException()
                             if (raf != null) {
                                 raf.write(buffer, 0, len)
                             } else if (safChannel != null) {
@@ -399,9 +420,10 @@ class HanimeDownloadWorker(
                             downloadedLength += len
 
                             if (System.currentTimeMillis() - delayTime > RESPONSE_INTERVAL) {
-                                val progress = (downloadedLength * 100 / entity.length).coerceAtMost(100)
-                                setProgress(workDataOf(PROGRESS to progress.toInt()))
-                                updateDownloadNotification(progress.toInt())
+                                val progress = (downloadedLength * 100 / entity.length).coerceAtMost(100).toInt()
+                                setProgress(workDataOf(PROGRESS to progress))
+                                if (!isStopped) setForeground(createForegroundInfo(progress))
+                                updateDownloadNotification(progress)
                                 DatabaseRepo.HanimeDownload.update(
                                     entity.copy(downloadedLength = downloadedLength,
                                         state = DownloadState.Downloading
@@ -412,6 +434,8 @@ class HanimeDownloadWorker(
                             len = bodyStream.read(buffer)
                         }
                     } catch (e: IOException) {
+                        // 用户暂停时 OkHttp 会抛 stream was reset: CANCEL。不能当成可重试的断流再拉一次。
+                        if (isStopped) throw e
                         if (!e.isStreamResetCancel() || retryCount >= MAX_STREAM_RETRY_COUNT) {
                             throw e
                         }
@@ -437,14 +461,21 @@ class HanimeDownloadWorker(
                     workDataOf(DownloadState.STATE to DownloadState.Finished.mask)
                 )
 
+            } catch (e: CancellationException) {
+                cancelDownloadNotification()
+                result = Result.success(
+                    workDataOf(DownloadState.STATE to DownloadState.Paused.mask)
+                )
+                throw e
             } catch (e: Exception) {
-                result = if (e is CancellationException || e.isStoppedCancellation()) {
+                if (isStopped || e.isStoppedCancellation()) {
                     cancelDownloadNotification()
-                    mainScope.launch { showShortToast(R.string.download_error_cancelled) }
-                    Result.success(
+                    result = Result.success(
                         workDataOf(DownloadState.STATE to DownloadState.Paused.mask)
                     )
-                } else if (e.isRetryableNetworkError() && runAttemptCount < MAX_WORK_RETRY_COUNT) {
+                    throw CancellationException()
+                }
+                result = if (e.isRetryableNetworkError() && runAttemptCount < MAX_WORK_RETRY_COUNT) {
                     val reason = e.toDownloadErrorMessage()
                     showRetryNotification(reason)
                     mainScope.launch {
@@ -464,21 +495,24 @@ class HanimeDownloadWorker(
                     )
                 }
             } finally {
-                val state = DownloadState.from(
-                    result.outputData.getInt(DownloadState.STATE, DownloadState.Unknown.mask)
-                )
-                DatabaseRepo.HanimeDownload.update(
-                    entity.copy(
-                        state = if (shouldRetry) DownloadState.Queued else state,
-                        downloadedLength = downloadedLength
+                withContext(NonCancellable) {
+                    val state = DownloadState.from(
+                        result.outputData.getInt(DownloadState.STATE, DownloadState.Unknown.mask)
                     )
-                )
-                raf?.closeQuietly()
-                safChannel?.closeQuietly()
-                safPfd?.closeQuietly()
-                response?.closeQuietly()
-                body?.closeQuietly()
-                bodyStream?.closeQuietly()
+                    DatabaseRepo.HanimeDownload.update(
+                        entity.copy(
+                            state = if (shouldRetry) DownloadState.Queued else state,
+                            downloadedLength = downloadedLength
+                        )
+                    )
+                    activeCall.set(null)
+                    raf?.closeQuietly()
+                    safChannel?.closeQuietly()
+                    safPfd?.closeQuietly()
+                    response?.closeQuietly()
+                    body?.closeQuietly()
+                    bodyStream?.closeQuietly()
+                }
             }
             return@withContext result
         }

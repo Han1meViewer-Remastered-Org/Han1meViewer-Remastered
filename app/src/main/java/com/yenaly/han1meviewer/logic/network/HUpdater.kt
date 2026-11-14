@@ -11,6 +11,9 @@ import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.util.checkNeedUpdate
 import com.yenaly.han1meviewer.util.copyTo
 import com.yenaly.han1meviewer.util.runSuspendCatching
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import okio.use
 import java.io.File
 import java.util.zip.ZipInputStream
@@ -117,8 +120,13 @@ object HUpdater {
      *
      * @param url update url
      */
+    @OptIn(InternalCoroutinesApi::class)
     suspend fun File.injectUpdate(url: String, progress: (suspend (Int, Long, Long) -> Unit)? = null) {
         val res = HanimeNetwork.githubService.request(url)
+        // 响应头到了之后，读包体是阻塞的。任务一取消就关掉流，read 才能马上返回。
+        currentCoroutineContext()[Job]?.invokeOnCompletion(onCancelling = true) { cause ->
+            if (cause != null) res.body()?.close()
+        }
         if (url.endsWith("zip")) {
             Log.d(TAG, "Injecting update from zip ($url)")
             res.body()?.use { body ->

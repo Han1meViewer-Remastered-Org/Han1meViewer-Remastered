@@ -81,6 +81,7 @@ import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
+import com.yenaly.han1meviewer.ui.component.lazy.stableLazyKeys
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeHomePageVideos
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
@@ -633,6 +634,7 @@ private fun OnlineWatchHistoryGrid(
     onOpenVideo: (HanimeInfo) -> Unit,
     onDeleteVideo: (HanimeInfo) -> Unit,
 ) {
+    val rowKeys = remember(items) { stableLazyKeys(items.map { it.videoCode }) }
     val videoColumns = rememberVideoGridColumns()
     val showDateAndViews = Preferences.rememberBooleanPreference(
         SettingsPreferenceKeys.SHOW_DATE_AND_VIEWS_IN_CARD, true
@@ -654,7 +656,7 @@ private fun OnlineWatchHistoryGrid(
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
                 )
             }
-            items(items, key = { it.videoCode }) { item ->
+            itemsIndexed(items, key = { index, _ -> rowKeys[index] }) { _, item ->
                 VideoCardItem(
                     videoItem = item,
                     showDateAndViews = showDateAndViews,

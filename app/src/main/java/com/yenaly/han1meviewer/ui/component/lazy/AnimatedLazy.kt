@@ -399,3 +399,17 @@ private fun AnimatedLazyItemContainer(
         content()
     }
 }
+
+/**
+ * 给 Lazy 列表生成稳定且唯一的 key。
+ * 同一 id 出现多次时，第一条保持原 id，后面的加上出现次数，避免 Compose 因 key 冲突直接崩溃。
+ */
+fun stableLazyKeys(ids: List<String>): List<String> {
+    val seen = HashMap<String, Int>(ids.size)
+    return ids.mapIndexed { index, raw ->
+        val id = raw.ifBlank { "blank-$index" }
+        val count = seen.getOrDefault(id, 0)
+        seen[id] = count + 1
+        if (count == 0) id else "$id#$count"
+    }
+}
