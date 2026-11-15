@@ -138,6 +138,8 @@
     <string name="h_keyframes_enable_tip">该功能关闭后并不会删除你的历史数据</string>
     <string name="h_keyframes_disable_tip">开启后，播放器顶部会有相关部件显示</string>
     <string name="h_keyframe_title_prefix">影片代码：</string>
+    <string name="h_keyframe_created_at">创建于 %1$s</string>
+    <string name="h_keyframe_modified_at">最近修改 %1$s</string>
     <string name="manage">管理</string>
     <string name="h_keyframe_manage">关键H帧管理</string>
     <string name="h_keyframe">关键H帧</string>

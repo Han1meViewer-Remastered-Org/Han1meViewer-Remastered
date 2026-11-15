@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,6 +24,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
+import com.yenaly.han1meviewer.logic.entity.HKeyframeHeader
+import com.yenaly.han1meviewer.logic.entity.HKeyframeType
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.screen.settings.HKeyframeSettingsScreen
 import com.yenaly.han1meviewer.ui.screen.settings.HKeyframeSettingsUiState
@@ -41,7 +44,26 @@ private const val SHARED_H_KEYFRAMES_USE_FIRST = "shared_h_keyframes_use_first"
 private const val WHEN_COUNTDOWN_REMIND = "when_countdown_remind"
 
 @Composable
-fun HKeyframesTopBarActions(onImportClick: () -> Unit) {
+fun SharedHKeyframesTopBarActions(onSearchClick: () -> Unit) {
+    FilledIconButton(onClick = onSearchClick) {
+        Icon(
+            painter = painterResource(R.drawable.ic_baseline_search_24),
+            contentDescription = stringResource(R.string.search),
+        )
+    }
+}
+
+@Composable
+fun HKeyframesTopBarActions(
+    onSearchClick: () -> Unit,
+    onImportClick: () -> Unit,
+) {
+    FilledIconButton(onClick = onSearchClick) {
+        Icon(
+            painter = painterResource(R.drawable.ic_baseline_search_24),
+            contentDescription = stringResource(R.string.search),
+        )
+    }
     FilledIconButton(onClick = onImportClick) {
         Icon(
             imageVector = Icons.Filled.Add,
@@ -55,10 +77,15 @@ fun HKeyframesRouteScreen(
     onOpenVideo: (String) -> Unit,
     showImportDialog: Boolean,
     onImportDialogDismiss: () -> Unit,
+    searchVisible: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onCloseSearch: () -> Unit,
 ) {
     val viewModel: SettingsViewModel = viewModel()
     val items by viewModel.loadAllHKeyframes()
         .collectAsStateWithLifecycle(initialValue = emptyList())
+    val shown = remember(items, searchQuery) { items.filterHKeyframes(searchQuery) }
     var sharedHKeyframeEntity by remember { mutableStateOf<HKeyframeEntity?>(null) }
 
     if (showImportDialog) {
@@ -77,13 +104,22 @@ fun HKeyframesRouteScreen(
     }
 
     HKeyframesScreen(
-        items = items,
+        items = shown,
+        searchVisible = searchVisible,
+        searchQuery = searchQuery,
+        onSearchQueryChange = onSearchQueryChange,
+        onCloseSearch = onCloseSearch,
         onOpenVideo = onOpenVideo,
         onDeleteEntity = { entity ->
             viewModel.deleteHKeyframes(entity)
         },
         onUpdateEntityTitle = { entity, newTitle ->
-            viewModel.updateHKeyframes(entity.copy(title = newTitle))
+            viewModel.updateHKeyframes(
+                entity.copy(
+                    title = newTitle,
+                    lastModifiedTime = System.currentTimeMillis(),
+                )
+            )
             showShortToast(R.string.modify_success)
         },
         onDeleteKeyframe = { videoCode, keyframe ->
@@ -113,11 +149,29 @@ fun HKeyframesRouteScreen(
             confirmText = stringResource(R.string.confirm),
             dismissText = stringResource(R.string.cancel),
             onConfirm = {
-                viewModel.insertHKeyframes(entity.copy(lastModifiedTime = System.currentTimeMillis()))
+                val now = System.currentTimeMillis()
+                viewModel.insertHKeyframes(
+                    entity.copy(
+                        createdTime = entity.createdTime.takeIf { it > 0L } ?: now,
+                        lastModifiedTime = now,
+                    )
+                )
                 sharedHKeyframeEntity = null
             },
             onDismiss = { sharedHKeyframeEntity = null },
         )
+    }
+}
+
+private fun List<HKeyframeEntity>.filterHKeyframes(query: String): List<HKeyframeEntity> {
+    val keyword = query.trim()
+    if (keyword.isEmpty()) return this
+    return filter { entity ->
+        entity.title.contains(keyword, ignoreCase = true) ||
+            entity.videoCode.contains(keyword, ignoreCase = true) ||
+            entity.keyframes.any { keyframe ->
+                keyframe.prompt?.contains(keyword, ignoreCase = true) == true
+            }
     }
 }
 
@@ -164,15 +218,58 @@ private fun ImportSharedHKeyframeDialog(
 @Composable
 fun SharedHKeyframesRouteScreen(
     onOpenVideo: (String) -> Unit,
+    searchVisible: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onCloseSearch: () -> Unit,
 ) {
     val viewModel: SettingsViewModel = viewModel()
     val items by viewModel.loadAllSharedHKeyframes()
         .collectAsStateWithLifecycle(initialValue = emptyList())
+    val shown = remember(items, searchQuery) { items.filterSharedHKeyframes(searchQuery) }
 
     SharedHKeyframesScreen(
-        items = items,
+        items = shown,
+        searchVisible = searchVisible,
+        searchQuery = searchQuery,
+        onSearchQueryChange = onSearchQueryChange,
+        onCloseSearch = onCloseSearch,
         onOpenVideo = onOpenVideo,
     )
+}
+
+private fun List<HKeyframeType>.filterSharedHKeyframes(query: String): List<HKeyframeType> {
+    val keyword = query.trim()
+    if (keyword.isEmpty()) return this
+    val result = mutableListOf<HKeyframeType>()
+    var header: HKeyframeHeader? = null
+    var headerAdded = false
+    for (item in this) {
+        when (item) {
+            is HKeyframeHeader -> {
+                header = item
+                headerAdded = false
+            }
+            is HKeyframeEntity -> {
+                val headerMatches = header?.title?.contains(keyword, ignoreCase = true) == true
+                val entityMatches = item.title.contains(keyword, ignoreCase = true) ||
+                    item.videoCode.contains(keyword, ignoreCase = true) ||
+                    item.author.orEmpty().contains(keyword, ignoreCase = true) ||
+                    item.keyframes.any { keyframe ->
+                        keyframe.prompt?.contains(keyword, ignoreCase = true) == true
+                    }
+                if (headerMatches || entityMatches) {
+                    val currentHeader = header
+                    if (currentHeader != null && !headerAdded) {
+                        result += currentHeader
+                        headerAdded = true
+                    }
+                    result += item
+                }
+            }
+        }
+    }
+    return result
 }
 
 @Composable

@@ -147,6 +147,8 @@
     <string name="h_keyframes_enable_tip">該功能關閉後並不會刪除你的歷史資料</string>
     <string name="h_keyframes_disable_tip">開啟後，播放器頂部會顯示🥵</string>
     <string name="h_keyframe_title_prefix">影片代號：</string>
+    <string name="h_keyframe_created_at">建立於 %1$s</string>
+    <string name="h_keyframe_modified_at">最近修改 %1$s</string>
     <string name="manage">管理</string>
     <string name="h_keyframe_manage">關鍵H幀管理</string>
     <string name="h_keyframe">關鍵H幀</string>

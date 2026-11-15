@@ -138,6 +138,8 @@
     <string name="h_keyframes_enable_tip">無効にしても履歴データは削除されません</string>
     <string name="h_keyframes_disable_tip">有効にするとプレイヤー上部にウィジェットが表示されます</string>
     <string name="h_keyframe_title_prefix">動画コード：</string>
+    <string name="h_keyframe_created_at">作成 %1$s</string>
+    <string name="h_keyframe_modified_at">最終更新 %1$s</string>
     <string name="manage">管理</string>
     <string name="h_keyframe_manage">キーHフレーム管理</string>
     <string name="h_keyframe">キーHフレーム</string>

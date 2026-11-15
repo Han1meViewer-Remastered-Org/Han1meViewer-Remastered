@@ -66,13 +66,14 @@ abstract class HKeyframeDao {
     ) {
         val entity = findBy(videoCode)
         if (entity == null) {
+            val now = System.currentTimeMillis()
             insert(
                 HKeyframeEntity(
                     videoCode,
                     title,
                     mutableListOf(keyframe),
-                    lastModifiedTime = System.currentTimeMillis(),
-                    createdTime = System.currentTimeMillis(),
+                    lastModifiedTime = now,
+                    createdTime = now,
                     author = null
                 )
             )

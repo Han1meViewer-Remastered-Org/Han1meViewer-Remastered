@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -44,6 +45,7 @@ import com.yenaly.han1meviewer.ui.navigation.settings.SettingsDestinationSpec
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsScaffold
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRouteScreen
+import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesTopBarActions
 import com.yenaly.han1meviewer.ui.screen.account.AccountScreen
 import com.yenaly.han1meviewer.ui.viewmodel.CreatorCenterViewModel
 import com.yenaly.han1meviewer.ui.viewmodel.UserAccountViewModel
@@ -272,27 +274,67 @@ fun MainNavHost(
         }
         composable<HKeyframesRoute> {
             var showImportDialog by remember { mutableStateOf(false) }
+            var searchVisible by rememberSaveable { mutableStateOf(false) }
+            var searchQuery by rememberSaveable { mutableStateOf("") }
             SettingsScaffold(
                 navController = navController,
                 fallbackDestination = HKeyframeSettingsRoute,
                 actions = {
-                    HKeyframesTopBarActions(onImportClick = { showImportDialog = true })
+                    HKeyframesTopBarActions(
+                        onSearchClick = {
+                            if (searchVisible) {
+                                searchVisible = false
+                                searchQuery = ""
+                            } else {
+                                searchVisible = true
+                            }
+                        },
+                        onImportClick = { showImportDialog = true },
+                    )
                 },
             ) {
                 HKeyframesRouteScreen(
                     onOpenVideo = onNavigateToVideo,
                     showImportDialog = showImportDialog,
                     onImportDialogDismiss = { showImportDialog = false },
+                    searchVisible = searchVisible,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    onCloseSearch = {
+                        searchVisible = false
+                        searchQuery = ""
+                    },
                 )
             }
         }
         composable<SharedHKeyframesRoute> {
+            var searchVisible by rememberSaveable { mutableStateOf(false) }
+            var searchQuery by rememberSaveable { mutableStateOf("") }
             SettingsScaffold(
                 navController = navController,
                 fallbackDestination = HKeyframeSettingsRoute,
+                actions = {
+                    SharedHKeyframesTopBarActions(
+                        onSearchClick = {
+                            if (searchVisible) {
+                                searchVisible = false
+                                searchQuery = ""
+                            } else {
+                                searchVisible = true
+                            }
+                        },
+                    )
+                },
             ) {
                 SharedHKeyframesRouteScreen(
                     onOpenVideo = onNavigateToVideo,
+                    searchVisible = searchVisible,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    onCloseSearch = {
+                        searchVisible = false
+                        searchQuery = ""
+                    },
                 )
             }
         }

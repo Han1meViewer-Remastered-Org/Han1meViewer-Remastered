@@ -1,9 +1,12 @@
 package com.yenaly.han1meviewer.ui.screen.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -13,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.ui.component.PopupSearchBar
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -27,14 +31,44 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 @Composable
 fun SharedHKeyframesScreen(
     items: List<HKeyframeType>,
+    searchVisible: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onCloseSearch: () -> Unit,
     onOpenVideo: (String) -> Unit,
 ) {
-    if (items.isEmpty()) {
-        EmptyContent(hint = stringResource(R.string.here_is_empty))
-        return
-    }
+    BackHandler(enabled = searchVisible, onBack = onCloseSearch)
 
+    Column(modifier = Modifier.fillMaxSize()) {
+        PopupSearchBar(
+            visible = searchVisible,
+            query = searchQuery,
+            onQueryChange = onSearchQueryChange,
+            onClose = onCloseSearch,
+            placeholder = stringResource(R.string.search_video_hint),
+        )
+        if (items.isEmpty()) {
+            Box(modifier = Modifier.weight(1f)) {
+                EmptyContent(hint = stringResource(R.string.here_is_empty))
+            }
+            return
+        }
+        SharedHKeyframeList(
+            items = items,
+            onOpenVideo = onOpenVideo,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun SharedHKeyframeList(
+    items: List<HKeyframeType>,
+    onOpenVideo: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(
+        modifier = modifier,
         contentPadding = PaddingValues(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -122,6 +156,10 @@ private fun SharedHKeyframesScreenPreview() {
                     author = "tester",
                 ),
             ),
+            searchVisible = false,
+            searchQuery = "",
+            onSearchQueryChange = {},
+            onCloseSearch = {},
             onOpenVideo = {},
         )
     }

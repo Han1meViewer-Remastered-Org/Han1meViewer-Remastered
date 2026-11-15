@@ -1,7 +1,9 @@
 package com.yenaly.han1meviewer.ui.screen.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,12 +32,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import cn.jzvd.JZUtils
+import com.yenaly.han1meviewer.LOCAL_DATE_TIME_FORMAT
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
+import com.yenaly.han1meviewer.ui.component.PopupSearchBar
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 private enum class HKeyframeDialog {
     EditEntity,
@@ -48,6 +56,10 @@ private enum class HKeyframeDialog {
 @Composable
 fun HKeyframesScreen(
     items: List<HKeyframeEntity>,
+    searchVisible: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onCloseSearch: () -> Unit,
     onOpenVideo: (String) -> Unit,
     onDeleteEntity: (HKeyframeEntity) -> Unit,
     onUpdateEntityTitle: (HKeyframeEntity, String) -> Unit,
@@ -144,13 +156,63 @@ fun HKeyframesScreen(
             )
         }
 
-    if (items.isEmpty()) {
-        EmptyContent(hint = stringResource(R.string.here_is_empty))
-        return
-    }
+    BackHandler(enabled = searchVisible, onBack = onCloseSearch)
 
+    Column(modifier = Modifier.fillMaxSize()) {
+        PopupSearchBar(
+            visible = searchVisible,
+            query = searchQuery,
+            onQueryChange = onSearchQueryChange,
+            onClose = onCloseSearch,
+            placeholder = stringResource(R.string.search_video_hint),
+        )
+        if (items.isEmpty()) {
+            Box(modifier = Modifier.weight(1f)) {
+                EmptyContent(hint = stringResource(R.string.here_is_empty))
+            }
+            return
+        }
+        HKeyframeList(
+            items = items,
+            onOpenVideo = onOpenVideo,
+            onEdit = { entity ->
+                selectedEntity = entity
+                activeDialog = HKeyframeDialog.EditEntity
+            },
+            onDelete = { entity ->
+                selectedEntity = entity
+                activeDialog = HKeyframeDialog.DeleteEntity
+            },
+            onShare = { entity ->
+                selectedEntity = entity
+                activeDialog = HKeyframeDialog.ShareEntity
+            },
+            onEditKeyframe = { entity, keyframe ->
+                selectedKeyframe = entity.videoCode to keyframe
+                activeDialog = HKeyframeDialog.EditKeyframe
+            },
+            onDeleteKeyframe = { entity, keyframe ->
+                selectedKeyframe = entity.videoCode to keyframe
+                activeDialog = HKeyframeDialog.DeleteKeyframe
+            },
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun HKeyframeList(
+    items: List<HKeyframeEntity>,
+    onOpenVideo: (String) -> Unit,
+    onEdit: (HKeyframeEntity) -> Unit,
+    onDelete: (HKeyframeEntity) -> Unit,
+    onShare: (HKeyframeEntity) -> Unit,
+    onEditKeyframe: (HKeyframeEntity, HKeyframeEntity.Keyframe) -> Unit,
+    onDeleteKeyframe: (HKeyframeEntity, HKeyframeEntity.Keyframe) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -158,26 +220,11 @@ fun HKeyframesScreen(
             HKeyframeEntityCard(
                 entity = entity,
                 onOpenVideo = { onOpenVideo(entity.videoCode) },
-                onEdit = {
-                    selectedEntity = entity
-                    activeDialog = HKeyframeDialog.EditEntity
-                },
-                onDelete = {
-                    selectedEntity = entity
-                    activeDialog = HKeyframeDialog.DeleteEntity
-                },
-                onShare = {
-                    selectedEntity = entity
-                    activeDialog = HKeyframeDialog.ShareEntity
-                },
-                onEditKeyframe = { keyframe ->
-                    selectedKeyframe = entity.videoCode to keyframe
-                    activeDialog = HKeyframeDialog.EditKeyframe
-                },
-                onDeleteKeyframe = { keyframe ->
-                    selectedKeyframe = entity.videoCode to keyframe
-                    activeDialog = HKeyframeDialog.DeleteKeyframe
-                },
+                onEdit = { onEdit(entity) },
+                onDelete = { onDelete(entity) },
+                onShare = { onShare(entity) },
+                onEditKeyframe = { keyframe -> onEditKeyframe(entity, keyframe) },
+                onDeleteKeyframe = { keyframe -> onDeleteKeyframe(entity, keyframe) },
             )
         }
     }
@@ -227,6 +274,7 @@ private fun HKeyframeEntityCard(
                 modifier = Modifier.clickable(onClick = onOpenVideo),
                 color = MaterialTheme.colorScheme.primary,
             )
+            HKeyframeTimestamps(entity)
 
             HorizontalDivider()
 
@@ -240,6 +288,37 @@ private fun HKeyframeEntityCard(
             }
         }
     }
+}
+
+@Composable
+private fun HKeyframeTimestamps(entity: HKeyframeEntity) {
+    val createdAt = entity.createdTime.takeIf { it > 0L }
+    val modifiedAt = entity.lastModifiedTime.takeIf { it > 0L }
+    val showModified = createdAt != null && modifiedAt != null && modifiedAt / 1000 > createdAt / 1000
+    if (createdAt == null && !showModified) return
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        createdAt?.let { created ->
+            Text(
+                text = stringResource(R.string.h_keyframe_created_at, created.toDateTimeText()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (showModified && modifiedAt != null) {
+            Text(
+                text = stringResource(R.string.h_keyframe_modified_at, modifiedAt.toDateTimeText()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTime::class)
+private fun Long.toDateTimeText(): String {
+    return Instant.fromEpochMilliseconds(this)
+        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .format(LOCAL_DATE_TIME_FORMAT)
 }
 
 @Composable
@@ -414,9 +493,14 @@ private fun HKeyframesScreenPreview() {
                         HKeyframeEntity.Keyframe(12_000, "进入正题"),
                         HKeyframeEntity.Keyframe(36_000, "高能部分"),
                     ),
-                    createdTime = System.currentTimeMillis(),
+                    createdTime = System.currentTimeMillis() - 86_400_000L,
+                    lastModifiedTime = System.currentTimeMillis(),
                 )
             ),
+            searchVisible = false,
+            searchQuery = "",
+            onSearchQueryChange = {},
+            onCloseSearch = {},
             onOpenVideo = {},
             onDeleteEntity = {},
             onUpdateEntityTitle = { _, _ -> },

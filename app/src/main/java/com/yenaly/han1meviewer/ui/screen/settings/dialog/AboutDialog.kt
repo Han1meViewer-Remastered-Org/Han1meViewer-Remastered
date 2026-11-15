@@ -2,10 +2,13 @@ package com.yenaly.han1meviewer.ui.screen.settings.dialog
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialogDefaults
@@ -42,7 +45,7 @@ fun AboutDialog(
     val context = LocalContext.current
     BasicAlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.widthIn(max = 340.dp),
         properties = DialogProperties(),
         content = {
             Surface(
@@ -137,11 +140,9 @@ fun AboutDialog(
 private fun LinkButton(text: String, onClick: () -> Unit) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.wrapContentWidth(Alignment.Start),
+        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Text(text)
     }
 }
