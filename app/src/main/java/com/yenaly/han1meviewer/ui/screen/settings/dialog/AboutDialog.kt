@@ -1,14 +1,13 @@
 package com.yenaly.han1meviewer.ui.screen.settings.dialog
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialogDefaults
@@ -27,7 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.yenaly.han1meviewer.BuildConfig
@@ -45,7 +46,7 @@ fun AboutDialog(
     val context = LocalContext.current
     BasicAlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.widthIn(max = 340.dp),
+        modifier = Modifier.widthIn(max = 300.dp),
         properties = DialogProperties(),
         content = {
             Surface(
@@ -98,10 +99,11 @@ fun AboutDialog(
                         style = MaterialTheme.typography.bodyMedium,
                     )
 
-                    // 链接
-                    LinkButton(stringResource(R.string.about_repo)) { context.browse(HA1_GITHUB_URL) }
-                    LinkButton(stringResource(R.string.submit_bug)) { context.browse(HA1_GITHUB_ISSUE_URL) }
-                    LinkButton(stringResource(R.string.forum)) { context.browse(HA1_GITHUB_FORUM_URL) }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        LinkButton(stringResource(R.string.about_repo)) { context.browse(HA1_GITHUB_URL) }
+                        LinkButton(stringResource(R.string.submit_bug)) { context.browse(HA1_GITHUB_ISSUE_URL) }
+                        LinkButton(stringResource(R.string.forum)) { context.browse(HA1_GITHUB_FORUM_URL) }
+                    }
 
                     HorizontalDivider()
 
@@ -138,11 +140,20 @@ fun AboutDialog(
 
 @Composable
 private fun LinkButton(text: String, onClick: () -> Unit) {
-    TextButton(
-        onClick = onClick,
-        modifier = Modifier.wrapContentWidth(Alignment.Start),
-        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
-    ) {
-        Text(text)
-    }
+    Text(
+        text = text.breakBeforeParenthetical(),
+        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.bodyLarge,
+        textAlign = TextAlign.Start,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 4.dp),
+    )
+}
+
+/** 括号及其中的仓库名整段换到下一行，避免在斜杠处被裁成两截。 */
+private fun String.breakBeforeParenthetical(): String {
+    val index = indexOf('（').takeIf { it > 0 } ?: indexOf('(').takeIf { it > 0 } ?: return this
+    return substring(0, index).trimEnd() + "\n" + substring(index)
 }
