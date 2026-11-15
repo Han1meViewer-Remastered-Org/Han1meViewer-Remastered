@@ -46,7 +46,7 @@ fun AboutDialog(
     val context = LocalContext.current
     BasicAlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.widthIn(max = 300.dp),
+        modifier = Modifier.widthIn(max = 380.dp),
         properties = DialogProperties(),
         content = {
             Surface(
@@ -141,19 +141,12 @@ fun AboutDialog(
 @Composable
 private fun LinkButton(text: String, onClick: () -> Unit) {
     Text(
-        text = text.breakBeforeParenthetical(),
+        text = text,
         color = MaterialTheme.colorScheme.primary,
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Start,
         modifier = Modifier
-            .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 4.dp),
     )
-}
-
-/** 括号及其中的仓库名整段换到下一行，避免在斜杠处被裁成两截。 */
-private fun String.breakBeforeParenthetical(): String {
-    val index = indexOf('（').takeIf { it > 0 } ?: indexOf('(').takeIf { it > 0 } ?: return this
-    return substring(0, index).trimEnd() + "\n" + substring(index)
 }
