@@ -1,6 +1,21 @@
 package com.yenaly.han1meviewer.util
 
+import android.content.Context
+import android.webkit.WebSettings
 import com.yenaly.han1meviewer.USER_AGENT
+
+/**
+ * 启动时从系统 WebView 读到的 UA。普通请求在没有手动覆盖时用它，
+ * 避免默认字符串里的 Chrome 版本和内核真实版本对不上。
+ */
+@Volatile
+var deviceUserAgent: String = USER_AGENT
+    private set
+
+fun installDeviceUserAgent(context: Context) {
+    val raw = runCatching { WebSettings.getDefaultUserAgent(context) }.getOrNull()
+    deviceUserAgent = normalizeWebViewUserAgent(raw)
+}
 
 /**
  * 把 Android WebView 自带的 UA 规整成「看起来像普通 Chrome 移动版」的形式：

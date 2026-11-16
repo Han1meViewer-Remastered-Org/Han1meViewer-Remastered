@@ -39,7 +39,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import cn.jzvd.JZMediaInterface
 import cn.jzvd.Jzvd
 import coil.load
 import com.google.android.material.appbar.AppBarLayout
@@ -64,7 +63,6 @@ import com.yenaly.han1meviewer.ui.bridge.VideoPageHost
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.PermissionRequester
 import com.yenaly.han1meviewer.ui.navigation.main.VideoRoute
-import com.yenaly.han1meviewer.ui.view.video.ExoMediaKernel
 import com.yenaly.han1meviewer.ui.view.video.HJzvdStd
 import com.yenaly.han1meviewer.ui.view.video.HMediaKernel
 import com.yenaly.han1meviewer.ui.view.video.HanimeDataSource
@@ -171,7 +169,7 @@ fun VideoRouteHostScreen(
 
     fun updatePipAction() {
         if (!activity.isInPictureInPictureMode) return
-        val isPlaying = (Jzvd.CURRENT_JZVD?.mediaInterface as? ExoMediaKernel)?.isPlaying == true
+        val isPlaying = player.playback?.isPlaying == true
         val icon = if (isPlaying) {
             Icon.createWithResource(activity, R.drawable.ic_pip_pause_24)
         } else {
@@ -262,12 +260,7 @@ fun VideoRouteHostScreen(
             }
 
             override fun togglePlayPause() {
-                val mediaInterface = player.mediaInterface
-                if (mediaInterface.isPlaying) {
-                    mediaInterface.pause()
-                } else {
-                    mediaInterface.start()
-                }
+                player.playback?.togglePlayback()
                 updatePipAction()
             }
         }
@@ -398,8 +391,8 @@ fun VideoRouteHostScreen(
             player.clickHKeyframe(view)
         }
         player.onKeyframeLongClickListener = {
-            val mediaInterface: JZMediaInterface? = player.mediaInterface
-            if (mediaInterface != null && !mediaInterface.isPlaying) {
+            val playback = player.playback
+            if (playback != null && !playback.isPlaying) {
                 val currentPosition = player.currentPositionWhenPlaying
                 showAddHKeyframeDialog = Pair(currentPosition, videoTitle ?: "Untitled")
             } else {

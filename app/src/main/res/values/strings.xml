@@ -404,7 +404,7 @@
 標題：%1$s\n
 代號：%2$s\n
 有 %3$d 個時刻</string>
-    <string name="domain_change_tips">修改域名需要重啟程式，否則不起作用！\n
+    <string name="domain_change_tips">更換域名會立即生效，並登出目前的登入。\n
 不同域名不共通 Cookie，所以更換域名後需要重新進行登入操作。\n
 所以除 hanime1.me 以外的域名可能在某些時間段會重定向回 hanime1.me，這可能導致 Cookie 失效\n
 \n

@@ -24,7 +24,7 @@ import androidx.preference.PreferenceManager
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.Preferences.cloudFlareCookie
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.logic.network.ServiceCreator
+import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.CloudflareManualImportDialog
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.normalizeCloudflareCookieInput
 import com.yenaly.han1meviewer.ui.screen.web.CloudflareScreen
@@ -142,7 +142,7 @@ class CloudflareActivity : AppCompatActivity() {
                         onConfirm = { cookieInput, uaInput ->
                             cloudFlareCookie = CookieString(normalizeCloudflareCookieInput(cookieInput))
                             Preferences.cloudFlareUserAgentOverride = uaInput
-                            ServiceCreator.rebuildOkHttpClient()
+                            HanimeNetwork.rebuildNetwork()
                             showManualImportState.value = false
                             notifyFinished(true)
                             finish()
@@ -150,7 +150,7 @@ class CloudflareActivity : AppCompatActivity() {
                         onClear = {
                             cloudFlareCookie = CookieString("")
                             Preferences.cloudFlareUserAgentOverride = ""
-                            ServiceCreator.rebuildOkHttpClient()
+                            HanimeNetwork.rebuildNetwork()
                             showManualImportState.value = false
                         },
                         onDismiss = { showManualImportState.value = false },
@@ -227,7 +227,7 @@ class CloudflareActivity : AppCompatActivity() {
         // clearance 与生成它的 UA 绑定，必须让后续网络请求用同一个 UA，否则刚拿到就作废。
         Preferences.cloudFlareUserAgentOverride = challengeUserAgent
         cookieMgr.flush()
-        ServiceCreator.rebuildOkHttpClient()
+        HanimeNetwork.rebuildNetwork()
         notifyFinished(true)
         finish()
         return true

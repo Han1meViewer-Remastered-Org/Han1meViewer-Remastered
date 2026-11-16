@@ -1,0 +1,27 @@
+package com.yenaly.han1meviewer.logic.parser
+
+internal object HtmlSelectors {
+    const val CSRF_TOKEN = "input[name=_token]"
+    const val META_CSRF = "meta[name=csrf-token]"
+    const val HOME_ROWS = "div[id=home-rows-wrapper] > div"
+    const val USER_MODAL = "div[id=user-modal-dp-wrapper]"
+    const val HORIZONTAL_CARD = "div[class^=horizontal-card]"
+    const val USER_TAB_ITEM = "div[class^=user-tab-item-wrapper]"
+    const val THUMB_CONTAINER = "div[class^=thumb-container]"
+    const val DURATION = "div[class^=duration]"
+    const val STAT_ITEM = "div[class^=stat-item]"
+    const val SIMPLIFIED_TITLE = "div[class=home-rows-videos-title]"
+    const val CARD_TITLE = "div.title, h4.video-title"
+    const val CARD_SUBTITLE = "div.subtitle, div.video-meta-data"
+    const val CARD_REVIEWS = ".stats-container .stat-item"
+    const val PAGINATION = "ul.pagination"
+    const val PAGE_LINK = "a.page-link[href]"
+    const val CONTENT_PADDING = "content-padding-new"
+    const val SIMPLIFIED_WRAPPER = "home-rows-videos-wrapper"
+    const val HORIZONTAL_ROW = "horizontal-row"
+    const val PLAYLIST_VIDEO_LIST = "playlist-video-list"
+    const val SUBSCRIPTIONS_NAV = "div.subscriptions-nav"
+    const val SUBSCRIPTIONS_CONTENT = "div.content-padding-new"
+    const val ARTIST_CARD = "div.subscriptions-artist-card"
+    const val VIDEO_ITEM = "div[class^=video-item-container]"
+}

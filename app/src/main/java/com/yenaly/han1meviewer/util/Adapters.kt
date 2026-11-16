@@ -32,7 +32,7 @@ fun com.chad.library.adapter4.BaseQuickAdapter<*, *>.setStateViewLayout(
  */
 fun com.chad.library.adapter4.BaseQuickAdapter<*, *>.setStateViewLayout(
     view: View,
-    text: String? = null,
+    text: CharSequence? = null,
 ) {
     view.findViewById<TextView>(R.id.tv_empty).text =
         text ?: applicationContext.getString(R.string.here_is_empty)

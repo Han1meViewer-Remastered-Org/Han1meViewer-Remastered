@@ -43,7 +43,6 @@ import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import cn.jzvd.JZDataSource
-import cn.jzvd.JZMediaInterface
 import cn.jzvd.JZUtils
 import cn.jzvd.JzvdStd
 import com.google.android.material.button.MaterialButton
@@ -82,6 +81,9 @@ class HJzvdStd @JvmOverloads constructor(
         fun onFullscreenChanged(isFullscreen: Boolean)
     }
     var fullscreenListener: FullscreenListener? = null
+
+    val playback: PlaybackSession?
+        get() = mediaInterface?.let(::JzPlaybackSession)
 
     private val dialogAccentColor: Int
         get() = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary)
@@ -286,7 +288,7 @@ class HJzvdStd @JvmOverloads constructor(
         HKeyframeRvAdapter(videoCode).apply {
             setOnItemClickListener { _, _, position ->
                 val keyframe = getItem(position)
-                mediaInterface?.seekTo(keyframe.position)
+                playback?.seekTo(keyframe.position)
                 startProgressTimer()
             }
         }
@@ -319,12 +321,10 @@ class HJzvdStd @JvmOverloads constructor(
     private var videoSpeed: Float = userDefSpeed
         set(value) {
             field = value
-            mediaInterface?.let { mi ->
-                val isPlaying = mi.isPlaying
-                mi.setSpeed(value)
-                if (!isPlaying) {
-                    mi.pause()
-                }
+            playback?.let { session ->
+                val playing = session.isPlaying
+                session.setSpeed(value)
+                if (!playing) session.pause()
             }
         }
 
@@ -344,8 +344,8 @@ class HJzvdStd @JvmOverloads constructor(
             override fun onLongPress(e: MotionEvent) {
                 when (e.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        val mi: JZMediaInterface? = mediaInterface
-                        if (mi != null && mi.isPlaying) {
+                        val session = playback
+                        if (session != null && session.isPlaying) {
                             setSpeedInternal(videoSpeed * userDefLongPressSpeedTimes)
                             textureViewContainer.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             isSpeedGestureDetected = true
@@ -418,7 +418,7 @@ class HJzvdStd @JvmOverloads constructor(
         superResolution.setOnClickListener(this)
         btnResumeProgress.setOnClickListener {
             hasRestoredProgress = true
-            mediaInterface.seekTo(0L)
+            playback?.seekTo(0L)
             btnResumeProgress.visibility = GONE
         }
 
@@ -433,7 +433,11 @@ class HJzvdStd @JvmOverloads constructor(
             gestureLocked = !gestureLocked
             gestureLock.isSelected = gestureLocked
         }
+        installKeyframeGlyph()
+    }
 
+    private fun installKeyframeGlyph() {
+        tvKeyframe.text = tvKeyframe.withFallbackHotFace("\uD83E\uDD75")
     }
 
     override fun setUp(jzDataSource: JZDataSource?, screen: Int) {
@@ -945,31 +949,10 @@ class HJzvdStd @JvmOverloads constructor(
             LayoutParams.MATCH_PARENT
         )
 
-        var videoWidth = 0
-        var videoHeight = 0
-        when (mediaInterface) {
-            is ExoMediaKernel -> {
-                val mediaKernel = CURRENT_JZVD?.mediaInterface as? ExoMediaKernel
-                videoWidth  = mediaKernel?.videoRealWidth?:0
-                videoHeight = mediaKernel?.videoRealHeight?:0
-                Log.i(TAG,"mediaInterface:$mediaKernel,videoWidth:$videoWidth,videoHeight:$videoHeight")
-            }
-            is MpvMediaKernel -> {
-                val mediaKernel = CURRENT_JZVD?.mediaInterface as? MpvMediaKernel
-                videoWidth  = mediaKernel?.videoRealWidth?:0
-                videoHeight = mediaKernel?.videoRealHeight?:0
-                Log.i(TAG,"mediaInterface:$mediaKernel,videoWidth:$videoWidth,videoHeight:$videoHeight")
-            }
-            is SystemMediaKernel -> {
-                val mediaKernel = CURRENT_JZVD?.mediaInterface as? SystemMediaKernel
-                videoWidth  = mediaKernel?.videoRealWidth?:0
-                videoHeight = mediaKernel?.videoRealHeight?:0
-                Log.i(TAG,"mediaInterface:$mediaKernel,videoWidth:$videoWidth,videoHeight:$videoHeight")
-            }
-        }
-
+        val videoWidth = playback?.videoWidth ?: 0
+        val videoHeight = playback?.videoHeight ?: 0
         val isPortraitVideo = videoWidth > 0 && videoHeight > 0 && videoWidth < videoHeight
-        Log.i(TAG,"mediaInterface:$mediaInterface,videoWidth:$videoWidth,videoHeight:$videoHeight")
+        Log.i(TAG, "mediaInterface:$mediaInterface,videoWidth:$videoWidth,videoHeight:$videoHeight")
         if (isPortraitVideo) {
             pivotY = 0f
             scaleY = 0.5f
@@ -1149,17 +1132,17 @@ class HJzvdStd @JvmOverloads constructor(
                 .build()
             mAudioManager.requestAudioFocus(audioFocusRequest)
             if (seekToInAdvance != 0L) {
-                mediaInterface.seekTo(seekToInAdvance)
+                playback?.seekTo(seekToInAdvance)
                 seekToInAdvance = 0
             } else {
                 val position = JZUtils.getSavedProgress(context, jzDataSource.currentUrl)
                 if (position != 0L) {
-                    mediaInterface.seekTo(position) //这里为什么区分开呢，第一次的播放和resume播放是不一样的。 这里怎么区分是一个问题。然后
+                    playback?.seekTo(position) //这里为什么区分开呢，第一次的播放和resume播放是不一样的。 这里怎么区分是一个问题。然后
                 }
             }
         }
         if (isNeedResumeProgress()) {
-            mediaInterface.seekTo(savedProgress)
+            playback?.seekTo(savedProgress)
             hasRestoredProgress = true
         }
         state = STATE_PLAYING
@@ -1218,11 +1201,11 @@ class HJzvdStd @JvmOverloads constructor(
         rv.layoutManager = LinearLayoutManager(v.context)
         val adapter = hKeyframeAdapter
         rv.adapter = adapter
-        adapter.setStateViewLayout(
-            inflate(v.context, R.layout.layout_empty_view, null),
-            this@HJzvdStd.context.getString(R.string.here_is_empty) + "\n"
-                    + this@HJzvdStd.context.getString(R.string.long_press_to_add_h_keyframe)
-        )
+        val emptyView = inflate(v.context, R.layout.layout_empty_view, null)
+        val emptyText = emptyView.findViewById<TextView>(R.id.tv_empty)
+        val message = context.getString(R.string.here_is_empty) + "\n" +
+            context.getString(R.string.long_press_to_add_h_keyframe)
+        adapter.setStateViewLayout(emptyView, emptyText.withFallbackHotFace(message))
         popup.showAtLocation(textureViewContainer, Gravity.END, 0, 0)
     }
 
@@ -1235,7 +1218,7 @@ class HJzvdStd @JvmOverloads constructor(
      * 那么那个机型就先别用这个功能了。
      */
     private fun setSpeedInternal(speed: Float) {
-        mediaInterface?.setSpeed(speed)
+        playback?.setSpeed(speed)
     }
 
     /**

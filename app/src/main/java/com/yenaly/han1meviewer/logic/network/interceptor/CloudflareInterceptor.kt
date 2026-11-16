@@ -8,6 +8,7 @@ import android.widget.Toast
 import com.yenaly.han1meviewer.ui.activity.CloudflareActivity
 import okhttp3.Interceptor
 import okhttp3.Response
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,59 +21,95 @@ class CloudflareInterceptor(
         val request = chain.request()
         val response = chain.proceed(request)
 
-        if (response.code == 403 && response.header("cf-mitigated") == "challenge") {
-            response.close()
-            val url = request.url.toString()
-
-            // 用 CountDownLatch 代替同步锁
-            val latch = CountDownLatch(1)
-            val succeeded = AtomicBoolean(false)
-
-            // 注册回调，用户验证完成（或取消/关闭）后调用。用列表而不是单个静态字段，
-            // 这样多个并发请求各自触发挑战时（CloudflareActivity 是 singleTask，实际只会
-            // 有一个实例），全部等待者都能收到通知，而不是被后触发的请求覆盖导致永久卡死。
-            val listener: (Boolean) -> Unit = { success ->
-                succeeded.set(success)
-                latch.countDown()
-            }
-            CloudflareActivity.addFinishedListener(listener)
-
-            val intent = Intent(context, CloudflareActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            intent.putExtra(CloudflareActivity.EXTRA_URL, url)
-            try {
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(
-                        context.applicationContext,
-                        "cf启动失败错误: ${e.javaClass.simpleName}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-                CloudflareActivity.removeFinishedListener(listener)
-                return response
-            }
-
-            // 等待 WebView 验证完成，带超时兜底：Activity 一直卡在后台/被系统杀掉时
-            // 不会永久占用 OkHttp 调度线程。
-            val completed = latch.await(CF_WAIT_TIMEOUT_MINUTES, TimeUnit.MINUTES)
-            if (!completed) {
-                CloudflareActivity.removeFinishedListener(listener)
-                return response
-            }
-            if (!succeeded.get()) {
-                // 用户主动关闭/取消了验证，不重试请求，直接把原始 403 交还给调用方。
-                return response
-            }
-            return chain.proceed(request)
+        if (response.code != 403 || response.header("cf-mitigated") != "challenge") {
+            return response
         }
-        return response
+        // 已经重放过一次仍是挑战页：把这次的响应原样交还，不再打开验证页，也不关闭 body。
+        if (request.tag(CfRetried::class.java) != null) {
+            return response
+        }
+
+        val passed = waitForChallenge(request.url.toString())
+        if (!passed) {
+            return response
+        }
+        response.close()
+        return chain.proceed(
+            request.newBuilder()
+                .tag(CfRetried::class.java, CfRetried)
+                .build()
+        )
     }
+
+    private fun waitForChallenge(url: String): Boolean {
+        val waiter = ChallengeWaiter()
+        val shouldStart = synchronized(gate) {
+            val flight = inFlight
+            if (flight == null) {
+                val created = InFlightChallenge()
+                created.waiters.add(waiter)
+                inFlight = created
+                true
+            } else {
+                flight.waiters.add(waiter)
+                false
+            }
+        }
+        if (shouldStart) {
+            startChallenge(url)
+        }
+        val completed = waiter.latch.await(CF_WAIT_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+        return completed && waiter.success.get()
+    }
+
+    private fun startChallenge(url: String) {
+        val listener: (Boolean) -> Unit = { success -> finishChallenge(success) }
+        CloudflareActivity.addFinishedListener(listener)
+        val intent = Intent(context, CloudflareActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra(CloudflareActivity.EXTRA_URL, url)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            CloudflareActivity.removeFinishedListener(listener)
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(
+                    context.applicationContext,
+                    "cf启动失败错误: ${e.javaClass.simpleName}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            finishChallenge(false)
+        }
+    }
+
+    private fun finishChallenge(success: Boolean) {
+        val flight = synchronized(gate) {
+            val current = inFlight
+            inFlight = null
+            current
+        } ?: return
+        flight.waiters.forEach { waiter ->
+            waiter.success.set(success)
+            waiter.latch.countDown()
+        }
+    }
+
+    private class ChallengeWaiter {
+        val latch = CountDownLatch(1)
+        val success = AtomicBoolean(false)
+    }
+
+    private class InFlightChallenge {
+        val waiters = CopyOnWriteArrayList<ChallengeWaiter>()
+    }
+
+    private object CfRetried
 
     companion object {
         private const val CF_WAIT_TIMEOUT_MINUTES = 5L
+        private val gate = Any()
+        private var inFlight: InFlightChallenge? = null
     }
 }
-
-

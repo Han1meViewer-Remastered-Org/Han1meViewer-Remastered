@@ -17,6 +17,7 @@ import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.ui.view.video.HJzvdStd
 import com.yenaly.han1meviewer.ui.view.video.HMediaKernel
 import com.yenaly.han1meviewer.util.CookieString
+import com.yenaly.han1meviewer.util.deviceUserAgent
 import com.yenaly.han1meviewer.util.SafFileManager
 import com.yenaly.han1meviewer.worker.HanimeDownloadManagerV2
 import com.yenaly.yenaly_libs.utils.applicationContext
@@ -157,7 +158,7 @@ object Preferences {
      * 有手动覆盖值则用覆盖值，否则用默认 [USER_AGENT]。
      */
     val effectiveUserAgent: String
-        get() = cloudFlareUserAgentOverride.ifBlank { USER_AGENT }
+        get() = cloudFlareUserAgentOverride.ifBlank { deviceUserAgent }
 
     // 更新 相關
 
@@ -307,8 +308,7 @@ object Preferences {
     val baseUrl: String
         get() {
             if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
-                val url = if (appendCustomMirrorPath) customMirrorSite else customMirrorSite.toRootUrl()
-                return url.toRetrofitBaseUrl()
+                return customMirrorSite.toMirrorBaseUrl(appendCustomMirrorPath)
             }
             return preferenceSp.getString(SettingsPreferenceKeys.DOMAIN_NAME, HANIME_URL[0])
                 ?: HANIME_URL[0]
@@ -316,7 +316,9 @@ object Preferences {
 
     val homeUrl: String
         get() {
-            if (useCustomMirrorSite && customMirrorSite.isNotBlank()) return customMirrorSite
+            if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
+                return customMirrorSite.toRetrofitBaseUrl()
+            }
             return baseUrl
         }
 
@@ -333,7 +335,14 @@ object Preferences {
 
     private fun String.toRootUrl(): String {
         val uri = toUri()
-        return "${uri.scheme}://${uri.encodedAuthority}"
+        val scheme = uri.scheme ?: return this
+        val authority = uri.encodedAuthority ?: return this
+        return "$scheme://$authority"
+    }
+
+    internal fun String.toMirrorBaseUrl(appendPath: Boolean): String {
+        val chosen = if (appendPath) this else toRootUrl()
+        return chosen.toRetrofitBaseUrl()
     }
 
     val selectedBaseUrl: String

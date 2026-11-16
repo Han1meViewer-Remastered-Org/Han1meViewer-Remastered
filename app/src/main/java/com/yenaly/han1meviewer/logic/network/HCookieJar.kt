@@ -1,8 +1,6 @@
 package com.yenaly.han1meviewer.logic.network
 
-import android.util.Log
 import com.yenaly.han1meviewer.Preferences
-import com.yenaly.han1meviewer.util.CookieString
 import com.yenaly.han1meviewer.util.toLoginCookieList
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -11,12 +9,8 @@ import okhttp3.HttpUrl
 /**
  * 用於管理 Cookie。
  *
- * #issue-71: 我竟然栽倒在 Cookie 管理上好幾年了！你去看我以前的管理方式，
- * 是完全錯誤的，竟然還能維持應用正常運行，太離譜了！怪不得切換簡體繁體一直不起作用！
- *
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2024/03/13 013 15:20
+ * 响应里带回的 Cookie 只按主机暂存。登录 Cookie 和 cf_clearance 每次请求从偏好设置合并，
+ * 同名时以偏好设置为准，避免和暂存表叠成两份。
  */
 class HCookieJar : CookieJar {
 
@@ -27,20 +21,18 @@ class HCookieJar : CookieJar {
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val host = url.host
-        val cookies = mutableListOf<Cookie>()
-        cookieMap[host]?.let { cookies.addAll(it) }
-
-        cookies.addAll(Preferences.loginCookieStateFlow.value.toLoginCookieList(host))
-        cookies.addAll(Preferences.cloudFlareCookieStateFlow.value.toLoginCookieList(host))
-
-        Log.d("HCookieJar", "loadForRequest for $host: $cookies")
-
-        return cookies
+        val merged = LinkedHashMap<String, Cookie>()
+        cookieMap[host]?.forEach { cookie -> merged[cookie.name] = cookie }
+        Preferences.loginCookieStateFlow.value.toLoginCookieList(host).forEach { cookie ->
+            merged[cookie.name] = cookie
+        }
+        Preferences.cloudFlareCookieStateFlow.value.toLoginCookieList(host).forEach { cookie ->
+            merged[cookie.name] = cookie
+        }
+        return merged.values.toList()
     }
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        cookieMap[url.host] = cookies.toMutableList().also {
-            it += Preferences.loginCookieStateFlow.value.toLoginCookieList(url.host)
-        }
+        cookieMap[url.host] = cookies.toMutableList()
     }
 }

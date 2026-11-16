@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.util
 
-import android.util.Log
 import com.yenaly.han1meviewer.Preferences
 import okhttp3.Cookie
 
@@ -27,20 +26,13 @@ fun CookieString.toLoginCookieList(domain: String): List<Cookie> {
                         .name(cleanedName)
                         .value(cleanValue)
                         .build()
-                } catch (e: IllegalArgumentException) {
-                    Log.w(
-                        "CookieString",
-                        "无效Cookie: $cleanedName=$cleanValue, error=${e.message}"
-                    )
+                } catch (_: IllegalArgumentException) {
+                    // 非法名称或值直接跳过，不把 Cookie 内容写进日志。
                 }
-            } else {
-                Log.w("CookieString", "无效键值: $cookie")
             }
         }
     }
-    return cookieList.also {
-        Log.d("CookieString", "toCookieList: $it")
-    }
+    return cookieList
 }
 
 /**

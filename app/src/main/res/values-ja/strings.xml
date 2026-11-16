@@ -398,7 +398,7 @@
 タイトル：%1$s\n
 コード：%2$s\n
 %3$d 箇所</string>
-    <string name="domain_change_tips">ドメイン変更にはアプリ再起動が必要、否则无效！\n
+    <string name="domain_change_tips">ドメイン変更はすぐに反映され、現在のログインは解除されます。\n
 ドメインが異なるとCookieも別扱いなので、変更後は再ログインが必要。\n
 hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイレクトされる可能性があり、Cookieが無効化されるかも\n
 \n

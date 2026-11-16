@@ -23,6 +23,8 @@ class HProxySelector : ProxySelector() {
 
     private var delegation: ProxySelector? = null
     private val alternative: ProxySelector = getDefault() ?: NullProxySelector
+    private var cachedKey: String? = null
+    private var cachedProxies: List<Proxy>? = null
 
     init {
         updateProxy()
@@ -42,23 +44,39 @@ class HProxySelector : ProxySelector() {
         }
 
         fun validatePort(port: Int): Boolean {
-            return port in 0..65535
+            return port in 1..65535
         }
 
-        // #issue-39: 代理沒有應用到 WebView 上，只能通過此種方式來全局代理。
+        // WebView 不走 OkHttp 的 ProxySelector，靠这些系统属性。HTTP 和 SOCKS 要用各自的键。
         fun rebuildNetwork() {
             val properties = System.getProperties()
+            listOf(
+                "proxySet",
+                "proxyHost",
+                "proxyPort",
+                "http.proxyHost",
+                "http.proxyPort",
+                "https.proxyHost",
+                "https.proxyPort",
+                "socksProxyHost",
+                "socksProxyPort",
+            ).forEach { properties.remove(it) }
+            val ip = Preferences.proxyIp
+            val port = Preferences.proxyPort.toString()
             when (Preferences.proxyType) {
-                TYPE_HTTP, TYPE_SOCKS -> {
+                TYPE_HTTP -> {
                     properties["proxySet"] = true.toString()
-                    properties["proxyHost"] = Preferences.proxyIp
-                    properties["proxyPort"] = Preferences.proxyPort.toString()
+                    properties["proxyHost"] = ip
+                    properties["proxyPort"] = port
+                    properties["http.proxyHost"] = ip
+                    properties["http.proxyPort"] = port
+                    properties["https.proxyHost"] = ip
+                    properties["https.proxyPort"] = port
                 }
 
-                else -> {
-                    properties["proxySet"] = false.toString()
-                    properties["proxyHost"] = ""
-                    properties["proxyPort"] = ""
+                TYPE_SOCKS -> {
+                    properties["socksProxyHost"] = ip
+                    properties["socksProxyPort"] = port
                 }
             }
         }
@@ -75,18 +93,22 @@ class HProxySelector : ProxySelector() {
 
     override fun select(uri: URI?): MutableList<Proxy> {
         val type = Preferences.proxyType
+        val ip = Preferences.proxyIp
+        val port = Preferences.proxyPort
         if (type == TYPE_HTTP || type == TYPE_SOCKS) {
-            val ip = Preferences.proxyIp
-            val port = Preferences.proxyPort
-            if (ip.isNotBlank() && port != -1) {
-                val inetAddress = InetAddress.getByName(ip)
-                val socketAddress = InetSocketAddress(inetAddress, port)
-                return mutableListOf(
+            val key = "$type|$ip|$port"
+            cachedProxies?.takeIf { cachedKey == key }?.let { return it.toMutableList() }
+            if (ip.isNotBlank() && port > 0) {
+                val socketAddress = InetSocketAddress(InetAddress.getByName(ip), port)
+                val proxies = listOf(
                     Proxy(
                         if (type == TYPE_HTTP) Proxy.Type.HTTP else Proxy.Type.SOCKS,
                         socketAddress
                     )
                 )
+                cachedKey = key
+                cachedProxies = proxies
+                return proxies.toMutableList()
             }
         }
 

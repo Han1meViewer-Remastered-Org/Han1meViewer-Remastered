@@ -33,6 +33,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.json.JSONObject
 import retrofit2.Response
 import java.io.File
@@ -47,16 +48,16 @@ object NetworkRepo {
 
     //<editor-fold desc="Hanime">
 
-    fun getHomePage() = websiteIOFlow(
+    fun getHomePage() = websiteParseFlow(
         request = { HanimeNetwork.hanimeService.getHomePage(Preferences.homeUrl) },
-        action = Parser::homePageVer2
+        action = { Parser.homePageVer2(it) }
     )
 
     fun getHanimeSearchResult(
         page: Int, query: String?, genre: String?,
         sort: String?, broad: Boolean, date: String?,
         duration: String?, tags: Set<String>, brands: Set<String>,
-    ) = pageIOFlow(
+    ) = pageParseFlow(
         request = {
             HanimeNetwork.hanimeService.getHanimeSearchResult(
                 page, query, genre, sort,
@@ -64,29 +65,29 @@ object NetworkRepo {
                 date, duration, tags, brands
             )
         },
-        action = Parser::hanimeSearch
+        action = { Parser.hanimeSearch(it) }
     )
 
-    fun getHanimeVideo(videoCode: String) = videoIOFlow(
+    fun getHanimeVideo(videoCode: String) = videoParseFlow(
         request = { HanimeNetwork.hanimeService.getHanimeVideo(videoCode) },
-        action = Parser::hanimeVideoVer2
+        action = { Parser.hanimeVideoVer2(it) }
     )
 
-    fun getHanimePreview(date: String) = websiteIOFlow(
+    fun getHanimePreview(date: String) = websiteParseFlow(
         request = { HanimeNetwork.hanimeService.getHanimePreview(date) },
-        action = Parser::hanimePreview
+        action = { Parser.hanimePreview(it) }
     )
 
     //获取订阅或者可以说是关注列表及它们的更新
-    fun getMySubscriptions(page: Int) = websiteIOFlow(
+    fun getMySubscriptions(page: Int) = websiteParseFlow(
         request = { HanimeNetwork.hanimeService.getMySubscriptions(page) },
-        action = Parser::getMySubscriptions
+        action = { Parser.getMySubscriptions(it) }
     )
     //</editor-fold>
 
     //<editor-fold desc="My List">
 
-    fun getMyListItems(userId: String, listType: Any, page: Int) = pageIOFlow(
+    fun getMyListItems(userId: String, listType: Any, page: Int) = pageParseFlow(
         request = {
             when (listType) {
                 is String ->
@@ -99,52 +100,52 @@ object NetworkRepo {
                     throw IllegalArgumentException("typeOrId must be String or MyListType")
             }
         },
-        action = Parser::myListItems
+        action = { Parser.myListItems(it) }
     )
 
-    fun getMyPlayListItems(page: Int = 1, listCode: String = "0") = pageIOFlow(
+    fun getMyPlayListItems(page: Int = 1, listCode: String = "0") = pageParseFlow(
         request = {
             HanimeNetwork.myListService.getMyPlayListItems(listCode, page)
         },
-        action = Parser::myPlayListItems
+        action = { Parser.myPlayListItems(it) }
     )
 
     fun getOnlineWatchHistories(
         userId: String,
         sort: OnlineWatchHistorySort,
         page: Int,
-    ) = pageIOFlow(
+    ) = pageParseFlow(
         request = {
             HanimeNetwork.myListService.getOnlineWatchHistories(userId, sort.value, page)
         },
-        action = Parser::onlineWatchHistoryItems,
+        action = { Parser.onlineWatchHistoryItems(it) },
     )
 
-    fun getUserAccountPage(userId: String) = websiteIOFlow(
+    fun getUserAccountPage(userId: String) = websiteParseFlow(
         request = { HanimeNetwork.myListService.getUserAccountPage(userId) },
-        action = Parser::userAccountPage,
+        action = { Parser.userAccountPage(it) },
     )
 
     fun getUploadedVideos(
         userId: String,
         sort: CreatorSort,
         page: Int,
-    ) = pageIOFlow(
+    ) = pageParseFlow(
         request = {
             HanimeNetwork.myListService.getUploadedVideos(userId, sort.value, page)
         },
-        action = Parser::creatorUploadedItems,
+        action = { Parser.creatorUploadedItems(it) },
     )
 
     fun getUploadingVideos(
         userId: String,
         sort: CreatorSort,
         page: Int,
-    ) = pageIOFlow(
+    ) = pageParseFlow(
         request = {
             HanimeNetwork.myListService.getUploadingVideos(userId, sort.value, page)
         },
-        action = Parser::creatorUploadingItems,
+        action = { Parser.creatorUploadingItems(it) },
     )
 
     fun updateUserAccountProfile(
@@ -288,9 +289,9 @@ object NetworkRepo {
         return@websiteIOFlow WebsiteState.Error(IllegalStateException("cannot delete it ?!"))
     }
 
-    fun getPlaylists(page: Int, userId: String ) = websiteIOFlow(
+    fun getPlaylists(page: Int, userId: String ) = websiteParseFlow(
         request = { HanimeNetwork.myListService.getPlaylists(userId, page) },
-        action = Parser::playlists
+        action = { Parser.playlists(it) }
     )
 
     fun addToMyFavVideo(
@@ -537,7 +538,7 @@ object NetworkRepo {
         emit(WebsiteState.Loading)
         // 首先获取token
         val loginPage = HanimeNetwork.hanimeService.getLoginPage()
-        val token = loginPage.body()?.string()?.let(Parser::extractTokenFromLoginPage)
+        val token = loginPage.body()?.use { Parser.extractTokenFromLoginPage(it) }
         val req = HanimeNetwork.hanimeService.login(token, email, password)
         if (req.isSuccessful) {
             // 再次获取登录页面，如果失败则返回 cookie
@@ -557,6 +558,57 @@ object NetworkRepo {
         }
     }.catch { e ->
         emit(WebsiteState.Error(handleException(e)))
+    }.flowOn(Dispatchers.IO)
+
+    private fun <T> websiteParseFlow(
+        request: suspend () -> Response<ResponseBody>,
+        action: (ResponseBody) -> WebsiteState<T>,
+    ) = flow {
+        val requestResult = request.invoke()
+        val body = requestResult.body()
+        if (requestResult.isSuccessful) {
+            emit(
+                body?.use(action)
+                    ?: action(EMPTY_STRING.toResponseBody("text/html; charset=utf-8".toMediaType()))
+            )
+        } else {
+            body?.close()
+            requestResult.throwRequestException()
+        }
+    }.catch { e ->
+        emit(WebsiteState.Error(handleException(e)))
+    }.flowOn(Dispatchers.IO)
+
+    private fun <T> pageParseFlow(
+        request: suspend () -> Response<ResponseBody>,
+        action: (ResponseBody) -> PageLoadingState<T>,
+    ) = flow {
+        val requestResult = request.invoke()
+        val body = requestResult.body()
+        if (requestResult.isSuccessful && body != null) {
+            emit(body.use(action))
+        } else {
+            body?.close()
+            requestResult.throwRequestException()
+        }
+    }.catch { e ->
+        emit(PageLoadingState.Error(handleException(e)))
+    }.flowOn(Dispatchers.IO)
+
+    private fun <T> videoParseFlow(
+        request: suspend () -> Response<ResponseBody>,
+        action: (ResponseBody) -> VideoLoadingState<T>,
+    ) = flow {
+        val requestResult = request.invoke()
+        val body = requestResult.body()
+        if (requestResult.isSuccessful && body != null) {
+            emit(body.use(action))
+        } else {
+            body?.close()
+            requestResult.throwRequestException()
+        }
+    }.catch { e ->
+        emit(VideoLoadingState.Error(handleException(e)))
     }.flowOn(Dispatchers.IO)
 
     /**
@@ -579,42 +631,6 @@ object NetworkRepo {
         }
     }.catch { e ->
         emit(WebsiteState.Error(handleException(e)))
-    }.flowOn(Dispatchers.IO)
-
-    /**
-     * 用于有page分页的情况
-     */
-    private fun <T> pageIOFlow(
-        request: suspend () -> Response<ResponseBody>,
-        action: (String) -> PageLoadingState<T>,
-    ) = flow {
-        val requestResult = request.invoke()
-        val resultBody = requestResult.body()?.string()
-        if (requestResult.isSuccessful && resultBody != null) {
-            emit(action.invoke(resultBody))
-        } else {
-            requestResult.throwRequestException()
-        }
-    }.catch { e ->
-        emit(PageLoadingState.Error(handleException(e)))
-    }.flowOn(Dispatchers.IO)
-
-    /**
-     * 用于影片界面
-     */
-    private fun <T> videoIOFlow(
-        request: suspend () -> Response<ResponseBody>,
-        action: (String) -> VideoLoadingState<T>,
-    ) = flow {
-        val requestResult = request.invoke()
-        val resultBody = requestResult.body()?.string()
-        if (requestResult.isSuccessful && resultBody != null) {
-            emit(action.invoke(resultBody))
-        } else {
-            requestResult.throwRequestException()
-        }
-    }.catch { e ->
-        emit(VideoLoadingState.Error(handleException(e)))
     }.flowOn(Dispatchers.IO)
 
     internal fun Response<ResponseBody>.throwRequestException(): Nothing {

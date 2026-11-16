@@ -21,6 +21,7 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import com.yenaly.han1meviewer.EMPTY_STRING
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.Preferences.toMirrorBaseUrl
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.Parser
 import com.yenaly.han1meviewer.logic.network.DohConfig
@@ -39,7 +40,6 @@ import com.yenaly.han1meviewer.ui.screen.settings.dialog.CloudflareManualImportD
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.normalizeCloudflareCookieInput
 import com.yenaly.han1meviewer.util.CookieString
 import com.yenaly.han1meviewer.util.showAlertDialog
-import com.yenaly.yenaly_libs.ActivityManager
 import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.showShortToast
 import okhttp3.Request
@@ -77,7 +77,6 @@ fun NetworkSettingsRouteScreen() {
     var isCustomMirrorTesting by remember { mutableStateOf(false) }
     var customMirrorTestResult by remember { mutableStateOf<String?>(null) }
     var showDomainRestartConfirm by remember { mutableStateOf(false) }
-    var showHostsRestartConfirm by remember { mutableStateOf(false) }
     var showCustomHostsValidationError by remember { mutableStateOf<List<String>?>(null) }
     var showCustomMirrorValidationError by remember { mutableStateOf(false) }
     var showCustomMirrorWarningConfirm by remember { mutableStateOf(false) }
@@ -262,7 +261,7 @@ fun NetworkSettingsRouteScreen() {
             }
             Preferences.preferenceSp.edit { putBoolean(NETWORK_USE_BUILT_IN_HOSTS, value) }
             refreshKey++
-            showHostsRestartConfirm = true
+            HanimeNetwork.rebuildNetwork()
         },
         onSaveCustomHosts = { data ->
             val errors = HDns.validateCustomHosts(data)
@@ -360,14 +359,14 @@ fun NetworkSettingsRouteScreen() {
                 Preferences.cloudFlareCookie =
                     CookieString(normalizeCloudflareCookieInput(cookieInput))
                 Preferences.cloudFlareUserAgentOverride = uaInput
-                ServiceCreator.rebuildOkHttpClient()
+                HanimeNetwork.rebuildNetwork()
                 showCfManualImport = false
                 showShortToast(R.string.cf_manual_saved)
             },
             onClear = {
                 Preferences.cloudFlareCookie = CookieString(EMPTY_STRING)
                 Preferences.cloudFlareUserAgentOverride = EMPTY_STRING
-                ServiceCreator.rebuildOkHttpClient()
+                HanimeNetwork.rebuildNetwork()
                 showCfManualImport = false
                 showShortToast(R.string.cf_manual_cleared)
             },
@@ -393,7 +392,11 @@ fun NetworkSettingsRouteScreen() {
                 putBoolean(NETWORK_APPEND_CUSTOM_MIRROR_PATH, pendingAppendCustomMirrorPath)
             }
             logout()
-            ActivityManager.restart(killProcess = true)
+            HanimeNetwork.rebuildNetwork()
+            currentHost = Preferences.baseUrl
+            refreshKey++
+            pendingDomainValue = ""
+            showDomainRestartConfirm = false
         },
         onDismiss = {
             pendingDomainValue = ""
@@ -416,17 +419,6 @@ fun NetworkSettingsRouteScreen() {
             },
         )
     }
-
-    ConfirmDialog(
-        visible = showHostsRestartConfirm,
-        title = stringResource(R.string.attention),
-        message = stringResource(R.string.restart_or_not_working, EMPTY_STRING),
-        confirmText = stringResource(R.string.confirm),
-        dismissText = stringResource(R.string.cancel),
-        cancelable = false,
-        onConfirm = { ActivityManager.restart(killProcess = true) },
-        onDismiss = { showHostsRestartConfirm = false },
-    )
 
     val validationErrors = showCustomHostsValidationError
     if (validationErrors != null) {
@@ -539,7 +531,6 @@ private fun testCustomMirrorSite(context: Context, homeUrl: String, appendPath: 
         val request = Request.Builder().url(homeUrl).get().build()
         ServiceCreator.hClient.newCall(request).execute().use { response ->
             val finalUrl = response.request.url.toString()
-            val body = response.body.string()
             if (!response.isSuccessful) {
                 return context.getString(
                     R.string.custom_mirror_site_test_failed_http,
@@ -550,7 +541,7 @@ private fun testCustomMirrorSite(context: Context, homeUrl: String, appendPath: 
 
             val apiBaseUrl = buildCustomMirrorApiBaseUrl(homeUrl, appendPath)
             val watchTestResult = testCustomMirrorWatchUrl(context, apiBaseUrl)
-            when (val parseResult = Parser.homePageVer2(body)) {
+            when (val parseResult = response.body.use { Parser.homePageVer2(it) }) {
                 is WebsiteState.Success -> if (watchTestResult == null) {
                     context.getString(
                         R.string.custom_mirror_site_test_success,
@@ -611,11 +602,7 @@ private fun testCustomMirrorWatchUrl(context: Context, apiBaseUrl: String): Stri
 }
 
 private fun buildCustomMirrorApiBaseUrl(homeUrl: String, appendPath: Boolean): String {
-    val url = if (appendPath) homeUrl else {
-        val uri = homeUrl.toUri()
-        "${uri.scheme}://${uri.encodedAuthority}"
-    }
-    return if (url.endsWith('/')) url else "$url/"
+    return homeUrl.toMirrorBaseUrl(appendPath)
 }
 
 private fun buildDohSummary(context: Context): String {

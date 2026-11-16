@@ -13,6 +13,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.util.showAlertDialog
+import com.yenaly.yenaly_libs.utils.findActivityOrNull
 import com.yenaly.yenaly_libs.utils.showShortToast
 
 /**
@@ -83,8 +84,8 @@ class HKeyframeRvAdapter(
             if (isShared) return@also
             viewHolder.getView<MaterialButton>(R.id.btn_edit).apply {
                 setOnClickListener {
-                    val position = viewHolder.bindingAdapterPosition
-                    val item = getItem(position)
+                    val item = getItem(viewHolder.bindingAdapterPosition)
+                    val activity = context.findActivityOrNull<MainActivity>() ?: return@setOnClickListener
 
                     val view = View.inflate(context, R.layout.dialog_modify_h_keyframe, null)
                     val etPrompt = view.findViewById<TextView>(R.id.et_prompt)
@@ -97,18 +98,14 @@ class HKeyframeRvAdapter(
                         setView(view)
                         setPositiveButton(R.string.confirm) { _, _ ->
                             val prompt = etPrompt.text.toString()
-                            val pos = etPosition.text.toString().toLong()
-                            when (context) {
-                                is MainActivity -> {
-                                    context.viewModel.modifyHKeyframe(
-                                        videoCode, item, HKeyframeEntity.Keyframe(
-                                            position = pos,
-                                            prompt = prompt
-                                        )
-                                    )
-                                     showShortToast(R.string.modify_success)
-                                }
-                            }
+                            val pos = etPosition.text.toString().toLongOrNull() ?: return@setPositiveButton
+                            activity.viewModel.modifyHKeyframe(
+                                videoCode, item, HKeyframeEntity.Keyframe(
+                                    position = pos,
+                                    prompt = prompt
+                                )
+                            )
+                            showShortToast(R.string.modify_success)
                         }
                         setNegativeButton(R.string.cancel, null)
                     }
@@ -116,18 +113,14 @@ class HKeyframeRvAdapter(
             }
             viewHolder.getView<MaterialButton>(R.id.btn_delete).apply {
                 setOnClickListener {
-                    val position = viewHolder.bindingAdapterPosition
-                    val item = getItem(position)
+                    val item = getItem(viewHolder.bindingAdapterPosition)
+                    val activity = context.findActivityOrNull<MainActivity>() ?: return@setOnClickListener
                     it.context.showAlertDialog {
                         setTitle(R.string.sure_to_delete)
                         setMessage(JZUtils.stringForTime(item.position))
                         setPositiveButton(R.string.confirm) { _, _ ->
-                            when (context) {
-                                is MainActivity -> {
-                                    context.viewModel.removeHKeyframe(videoCode, item)
-                                     showShortToast(R.string.delete_success)
-                                }
-                            }
+                            activity.viewModel.removeHKeyframe(videoCode, item)
+                            showShortToast(R.string.delete_success)
                         }
                         setNegativeButton(R.string.cancel, null)
                     }

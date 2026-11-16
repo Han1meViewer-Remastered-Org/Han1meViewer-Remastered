@@ -77,8 +77,15 @@ object ServiceCreator {
      * Rebuild OkHttpClient
      */
     fun rebuildOkHttpClient() {
+        val previous = listOf(hClient, downloadClient, getchuClient)
         hClient = buildHClient()
+        downloadClient = buildDownloadClient()
         getchuClient = buildGetchuClient()
+        // 不能 shutdown dispatcher。验证页返回时，原请求还在这个客户端上重放，
+        // 关掉线程池会让后续 enqueue 直接变成 InterruptedIOException("executor rejected")。
+        previous.forEach { client ->
+            runCatching { client.connectionPool.evictAll() }
+        }
     }
 
     private fun buildGetchuClient(): OkHttpClient {
@@ -101,7 +108,9 @@ object ServiceCreator {
             .writeTimeout(30, TimeUnit.SECONDS)
             .protocols(listOf(Protocol.HTTP_1_1))
             .addInterceptor(UserAgentInterceptor)
+            .addInterceptor(CloudflareInterceptor(applicationContext))
             .addInterceptor(downloadSpeedLimitInterceptor)
+            .cookieJar(HCookieJar())
             .proxySelector(HProxySelector())
             .dns(dns)
             .build()

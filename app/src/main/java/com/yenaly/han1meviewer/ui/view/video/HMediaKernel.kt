@@ -54,6 +54,9 @@ import kotlin.math.absoluteValue
  * @time 2024/04/21 021 16:57
  */
 sealed interface HMediaKernel {
+    val videoRealWidth: Int
+    val videoRealHeight: Int
+
     enum class Type(val clazz: Class<out JZMediaInterface>) {
         MediaPlayer(SystemMediaKernel::class.java),
         ExoPlayer(ExoMediaKernel::class.java),
@@ -108,9 +111,9 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     private var callback: Runnable? = null
     private var prevSeek = 0L
 
-    var videoRealWidth: Int = 0
+    override var videoRealWidth: Int = 0
         private set
-    var videoRealHeight: Int = 0
+    override var videoRealHeight: Int = 0
         private set
     @OptIn(UnstableApi::class)
     override fun prepare() {
@@ -450,8 +453,8 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
 class SystemMediaKernel(jzvd: Jzvd) : JZMediaSystem(jzvd), HMediaKernel {
     // #issue-26: 有的手機長按快進會報錯，合理懷疑是不是因爲沒有加 post
     // #issue-28: 有的平板长按快进也会报错，结果是 IllegalArgumentException，很奇怪，两次 try-catch 处理试试。
-    val videoRealWidth: Int get() = mediaPlayer?.videoWidth ?: 0
-    val videoRealHeight: Int get() = mediaPlayer?.videoHeight ?: 0
+    override val videoRealWidth: Int get() = mediaPlayer?.videoWidth ?: 0
+    override val videoRealHeight: Int get() = mediaPlayer?.videoHeight ?: 0
     override fun setSpeed(speed: Float) {
         mMediaHandler?.post {
             try {
@@ -493,14 +496,14 @@ class SystemMediaKernel(jzvd: Jzvd) : JZMediaSystem(jzvd), HMediaKernel {
     }
 }
 
-class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
+class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
     companion object {
         const val TAG = "MpvMediaKernel"
     }
-    val videoRealWidth: Int
+    override val videoRealWidth: Int
         get() = MPVLib.getPropertyInt("video-params/w") ?: 0
 
-    val videoRealHeight: Int
+    override val videoRealHeight: Int
         get() = MPVLib.getPropertyInt("video-params/h") ?: 0
 
     private var mpvTimePos: Double = 0.0

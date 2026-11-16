@@ -47,10 +47,10 @@ const val VIDEO_COMMENT_PREFIX = "video"
 
 const val PREVIEW_COMMENT_PREFIX = "preview"
 
-// base url
+// base url。每次读取当前设置，换域名或镜像后 rebuildNetwork() 即可生效。
 
-@JvmField
-val HANIME_BASE_URL = Preferences.baseUrl
+val HANIME_BASE_URL: String
+    get() = Preferences.baseUrl
 
 /**
  * 如果添加备选网址别忘了确认[String.toVideoCode]的videoUrlRegex
@@ -61,8 +61,8 @@ object HanimeConstants {
     val ANIME_URL = arrayOf("https://hanime1.me/","https://hanime1.com/","https://hanimeone.me/")
 }
 
-@JvmField
-val HANIME_LOGIN_URL = HANIME_BASE_URL + "login"
+val HANIME_LOGIN_URL: String
+    get() = HANIME_BASE_URL + "login"
 
 // github url
 

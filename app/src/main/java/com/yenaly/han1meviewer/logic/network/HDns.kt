@@ -8,6 +8,7 @@ import okhttp3.dnsoverhttps.DnsOverHttps
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import java.net.InetAddress
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
@@ -36,20 +37,12 @@ class HDns : Dns {
             "2606:4700:3035::ac43:bb8d", "2606:4700:3030::6815:746", "2606:4700:3030::6815:714"
         )
 
+        /** 这组地址只钉主站。javchu.com 不在同一组边缘上，没有自定义 IP 时走正常解析。 */
+        private val pinnedHostnames = setOf("hanime1.me", "hanime1.com", "hanimeone.me")
+
         private val getchuIps = listOf("210.155.150.166", "210.155.150.145")
 
         private const val GETCHU_HOSTNAME = "www.getchu.com"
-
-        /**
-         * 添加DNS
-         */
-        private operator fun MutableMap<String, List<InetAddress>>.set(
-            host: String, ips: List<String>,
-        ) {
-            this[host] = ips.map {
-                InetAddress.getByAddress(host, InetAddress.getByName(it).address)
-            }
-        }
 
         /**
          * 解析自定义 IP 列表，逗号分隔
@@ -99,12 +92,10 @@ class HDns : Dns {
         if (Preferences.useBuiltInHosts && HANIME_HOSTNAME.contains(hostname)) {
             val customIps = resolveCustomIps()
             if (!customIps.isNullOrEmpty()) {
-                return customIps.map {
-                    InetAddress.getByAddress(hostname, InetAddress.getByName(it).address)
-                }
+                return addressesFor(hostname, customIps)
             }
-            return cloudFlareIps.map {
-                InetAddress.getByAddress(hostname, InetAddress.getByName(it).address)
+            if (hostname in pinnedHostnames) {
+                return addressesFor(hostname, cloudFlareIps)
             }
         }
 
@@ -127,9 +118,7 @@ class HDns : Dns {
             timeoutSeconds = DohConfig.timeoutSeconds(),
         )
         val dns = getOrCreateDohDns(config)
-        return dns.lookup(hostname).also {
-            Log.i("DOH", it.toString())
-        }
+        return dns.lookup(hostname)
     }
 
     fun lookupByDoHOnly(hostname: String): List<InetAddress> {
@@ -171,23 +160,21 @@ class HDns : Dns {
     }
 
     fun getCDNList(host: String): List<String> {
-        if (host == GETCHU_HOSTNAME) {
-            return getchuIps.distinct()
-        }
-
-        if (Preferences.useBuiltInHosts && HANIME_HOSTNAME.contains(host)) {
-            val customIps = resolveCustomIps()
-            if (!customIps.isNullOrEmpty()) {
-                return customIps.distinct()
-            }
-            return cloudFlareIps.distinct()
-        }
-
         return runCatching {
-            Dns.SYSTEM.lookup(host).map { it.hostAddress }.distinct()
-        }.getOrElse {
-            it.printStackTrace()
-            emptyList()
+            lookup(host).mapNotNull { it.hostAddress }.distinct()
+        }.getOrDefault(emptyList())
+    }
+
+    private val addressCache = ConcurrentHashMap<String, List<InetAddress>>()
+
+    /** IPv4 放前面，避免没有 IPv6 的网络先去连那几个 v6 地址。 */
+    private fun addressesFor(hostname: String, ips: List<String>): List<InetAddress> {
+        val ordered = ips.sortedBy { if (it.contains(':')) 1 else 0 }
+        val key = hostname + "\u0000" + ordered.joinToString(",")
+        return addressCache.getOrPut(key) {
+            ordered.map { ip ->
+                InetAddress.getByAddress(hostname, InetAddress.getByName(ip).address)
+            }
         }
     }
 
