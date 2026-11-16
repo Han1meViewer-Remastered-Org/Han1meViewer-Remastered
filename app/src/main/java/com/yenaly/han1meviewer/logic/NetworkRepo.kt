@@ -9,7 +9,9 @@ import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
 import com.yenaly.han1meviewer.logic.exception.HanimeNotFoundException
 import com.yenaly.han1meviewer.logic.exception.HttpResponseException
 import com.yenaly.han1meviewer.logic.exception.IPBlockedException
+import com.yenaly.han1meviewer.logic.exception.LoginStateExpiredException
 import com.yenaly.han1meviewer.logic.exception.ParseException
+import com.yenaly.han1meviewer.promptLoginExpired
 import com.yenaly.han1meviewer.logic.model.CommentPlace
 import com.yenaly.han1meviewer.logic.model.CreatorSort
 import com.yenaly.han1meviewer.logic.model.ModifiedPlaylistArgs
@@ -565,6 +567,7 @@ object NetworkRepo {
         action: (ResponseBody) -> WebsiteState<T>,
     ) = flow {
         val requestResult = request.invoke()
+        requestResult.throwIfSessionRejected()
         val body = requestResult.body()
         if (requestResult.isSuccessful) {
             emit(
@@ -584,6 +587,7 @@ object NetworkRepo {
         action: (ResponseBody) -> PageLoadingState<T>,
     ) = flow {
         val requestResult = request.invoke()
+        requestResult.throwIfSessionRejected()
         val body = requestResult.body()
         if (requestResult.isSuccessful && body != null) {
             emit(body.use(action))
@@ -600,6 +604,7 @@ object NetworkRepo {
         action: (ResponseBody) -> VideoLoadingState<T>,
     ) = flow {
         val requestResult = request.invoke()
+        requestResult.throwIfSessionRejected()
         val body = requestResult.body()
         if (requestResult.isSuccessful && body != null) {
             emit(body.use(action))
@@ -622,6 +627,7 @@ object NetworkRepo {
         action: (String) -> WebsiteState<T>,
     ) = flow {
         val requestResult = request.invoke()
+        requestResult.throwIfSessionRejected()
         val resultBody = requestResult.body()?.string()
         val permitted = permittedSuccessCode?.contains(requestResult.code()) == true
         if ((permitted || requestResult.isSuccessful)) {
@@ -632,6 +638,32 @@ object NetworkRepo {
     }.catch { e ->
         emit(WebsiteState.Error(handleException(e)))
     }.flowOn(Dispatchers.IO)
+
+    private fun loginExpired(): LoginStateExpiredException {
+        val message = getString(R.string.login_state_expired)
+        promptLoginExpired(message)
+        return LoginStateExpiredException(message)
+    }
+
+    private fun Response<*>.throwIfSessionRejected() {
+        if (!isAlreadyLogin || !rejectedLoginSession()) return
+        throw loginExpired()
+    }
+
+    private fun Response<*>.rejectedLoginSession(): Boolean {
+        val code = code()
+        if (code == 401 || code == 419) return true
+        if (encodedPathIsLogin(raw().request.url.encodedPath)) return true
+        if (code == 302 || code == 303 || code == 307 || code == 308) {
+            return headers()["Location"].orEmpty().contains("/login")
+        }
+        return false
+    }
+
+    private fun encodedPathIsLogin(path: String): Boolean {
+        val trimmed = path.trimEnd('/')
+        return trimmed == "/login" || trimmed.endsWith("/login")
+    }
 
     internal fun Response<ResponseBody>.throwRequestException(): Nothing {
         val body = errorBody()?.string()
@@ -651,14 +683,29 @@ object NetworkRepo {
 
             500 -> throw HanimeNotFoundException(getString(R.string.video_might_not_exist), code)
 
+            401, 419 -> if (isAlreadyLogin) {
+                throw loginExpired()
+            } else {
+                throw HttpResponseException(code, "$code ${message()}")
+            }
+
             404 -> if (!isAlreadyLogin) {
                 throw HttpResponseException(code, getString(R.string.not_logged_in_currently))
             } else {
                 throw HttpResponseException(code, "$code ${message()}")
             }
 
-            else -> throw HttpResponseException(code, "$code ${message()}")
+            else -> {
+                if (isAlreadyLogin && isExpiredSessionBody(body)) throw loginExpired()
+                throw HttpResponseException(code, "$code ${message()}")
+            }
         }
+    }
+
+    private fun isExpiredSessionBody(body: String?): Boolean {
+        if (body.isNullOrBlank()) return false
+        val text = body.lowercase()
+        return "csrf token mismatch" in text || "page expired" in text || "tokenmismatch" in text
     }
 
     internal fun handleException(e: Throwable): Throwable {

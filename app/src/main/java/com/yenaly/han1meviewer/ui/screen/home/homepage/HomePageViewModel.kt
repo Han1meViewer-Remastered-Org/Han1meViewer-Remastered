@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.ui.screen.home.homepage
 
 import android.util.Log
-import androidx.annotation.StringRes
 import androidx.core.content.edit
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -20,7 +19,8 @@ import com.yenaly.han1meviewer.logic.model.AnnouncementDto
 import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
-import com.yenaly.han1meviewer.logout
+import com.yenaly.han1meviewer.promptLoginExpired
+import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.util.Rollout
 import com.yenaly.yenaly_libs.utils.getSpValue
@@ -40,16 +40,8 @@ import kotlinx.serialization.decodeFromString
 import kotlin.time.Duration.Companion.milliseconds
 
 class HomePageViewModel: ViewModel() {
-    data class SessionExpiredMessage(
-        val message: String?,
-        @param:StringRes val fallbackResId: Int,
-    )
-
     private val _homePageFlow = MutableStateFlow<PageState<HomeData>>(PageState.Loading)
     val homePageFlow = _homePageFlow.asStateFlow()
-
-    private val _sessionExpiredMessage = MutableSharedFlow<SessionExpiredMessage>()
-    val sessionExpiredMessage = _sessionExpiredMessage
 
     private var homePageJob: Job? = null
 
@@ -80,13 +72,10 @@ class HomePageViewModel: ViewModel() {
                 when (networkState){
                     is WebsiteState.Error -> {
                         announcementsDeferred.cancel()
-                        if (networkState.throwable is LoginStateExpiredException) {
-                            logout()
-                            _sessionExpiredMessage.emit(
-                                SessionExpiredMessage(
-                                    message = networkState.throwable.message,
-                                    fallbackResId = R.string.login_state_expired,
-                                )
+                        if (networkState.throwable is LoginStateExpiredException && Preferences.isAlreadyLogin) {
+                            promptLoginExpired(
+                                networkState.throwable.message
+                                    ?: applicationContext.getString(R.string.login_state_expired),
                             )
                         }
                         val previousData = (_homePageFlow.value as? PageState.Success)?.info

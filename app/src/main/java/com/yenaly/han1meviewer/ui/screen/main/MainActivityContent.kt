@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.loginExpiredPrompt
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
 import com.yenaly.han1meviewer.logic.model.Announcement
@@ -110,9 +111,9 @@ fun MainActivityContent(
                 pendingUpdate = latest
             }
         }
-        LaunchedEffect(viewModel) {
-            viewModel.sessionExpiredMessage.collect { event ->
-                event.message?.let(::showShortToast) ?: showShortToast(event.fallbackResId)
+        LaunchedEffect(Unit) {
+            loginExpiredPrompt.collect {
+                onRequireLogin()
             }
         }
         LaunchedEffect(showUsageNotice, analyticsConsentAnswered) {

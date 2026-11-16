@@ -1,11 +1,17 @@
 package com.yenaly.han1meviewer
 
+import android.os.Handler
+import android.os.Looper
 import android.webkit.CookieManager
 import androidx.core.text.parseAsHtml
 import com.yenaly.han1meviewer.Preferences.isAlreadyLogin
 import com.yenaly.han1meviewer.Preferences.loginCookie
 import com.yenaly.han1meviewer.logic.network.HCookieJar
 import com.yenaly.han1meviewer.util.CookieString
+import com.yenaly.yenaly_libs.utils.showLongToast
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.serialization.json.Json
 
 @JvmField
@@ -73,6 +79,24 @@ fun logout() {
     loginCookie = CookieString(EMPTY_STRING)
     HCookieJar.cookieMap.clear()
     CookieManager.getInstance().removeAllCookies(null)
+}
+
+private val loginPromptLock = Any()
+private val _loginExpiredPrompt = MutableSharedFlow<Unit>(
+    extraBufferCapacity = 1,
+    onBufferOverflow = BufferOverflow.DROP_OLDEST,
+)
+
+/** 登录已失效时发出。界面收到后打开登录页。提示文字在这里弹出。 */
+val loginExpiredPrompt = _loginExpiredPrompt.asSharedFlow()
+
+fun promptLoginExpired(message: String) {
+    synchronized(loginPromptLock) {
+        if (!isAlreadyLogin) return
+        logout()
+    }
+    Handler(Looper.getMainLooper()).post { showLongToast(message) }
+    _loginExpiredPrompt.tryEmit(Unit)
 }
 
 fun login(cookies: String) {

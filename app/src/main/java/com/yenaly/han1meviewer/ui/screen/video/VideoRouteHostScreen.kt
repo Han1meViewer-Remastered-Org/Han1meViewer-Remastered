@@ -55,6 +55,7 @@ import com.yenaly.han1meviewer.logic.DatabaseRepo
 import com.yenaly.han1meviewer.logic.dao.CheckInRecordDatabase
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
+import com.yenaly.han1meviewer.logic.exception.LoginStateExpiredException
 import com.yenaly.han1meviewer.logic.exception.ParseException
 import com.yenaly.han1meviewer.logic.model.SearchOption
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
@@ -473,7 +474,9 @@ fun VideoRouteHostScreen(
             viewModel.hanimeVideoStateFlow.collect { state ->
                 when (state) {
                     is VideoLoadingState.Error -> {
-                        state.throwable.localizedMessage?.let { showShortToast(it) }
+                        if (state.throwable !is LoginStateExpiredException) {
+                            state.throwable.localizedMessage?.let { showShortToast(it) }
+                        }
                         if (state.throwable is ParseException) {
                             activity.browse(getHanimeVideoLink(route.videoCode))
                         }
@@ -543,11 +546,35 @@ fun VideoRouteHostScreen(
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.subscribeArtistFlow.collect { state ->
                 when (state) {
-                    is WebsiteState.Error -> showShortToast(R.string.subscribe_failed)
+                    is WebsiteState.Error -> if (state.throwable !is LoginStateExpiredException) {
+                        showShortToast(R.string.subscribe_failed)
+                    }
                     WebsiteState.Loading -> Unit
                     is WebsiteState.Success -> showShortToast(
                         if (state.info) R.string.subscribe_success else R.string.unsubscribe_success
                     )
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(viewModel) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.addToFavVideoFlow.collect { state ->
+                if (state is WebsiteState.Error && state.throwable !is LoginStateExpiredException) {
+                    val message = state.throwable.localizedMessage
+                    if (message.isNullOrBlank()) showShortToast(R.string.fav_failed) else showShortToast(message)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(viewModel) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.modifyMyListFlow.collect { state ->
+                if (state is WebsiteState.Error && state.throwable !is LoginStateExpiredException) {
+                    val message = state.throwable.localizedMessage
+                    if (message.isNullOrBlank()) showShortToast(R.string.add_failed) else showShortToast(message)
                 }
             }
         }

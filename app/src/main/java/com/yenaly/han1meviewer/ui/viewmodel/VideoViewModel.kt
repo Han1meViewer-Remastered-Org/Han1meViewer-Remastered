@@ -278,7 +278,10 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
 
 
 
-    private val _addToFavVideoFlow = MutableSharedFlow<WebsiteState<Boolean>>()
+    private val _addToFavVideoFlow = MutableSharedFlow<WebsiteState<Boolean>>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
     val addToFavVideoFlow = _addToFavVideoFlow.asSharedFlow()
 
     private val _loadDownloadedFlow = MutableSharedFlow<HanimeDownloadEntity?>()
@@ -303,12 +306,10 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
             NetworkRepo.addToMyFavVideo(
                 videoCode, likeStatus, currentUserId, csrfToken
             ).collect { state ->
-                _addToFavVideoFlow.emit(state)
-                if (likeStatus) {
-                    _hanimeVideoFlow.update { it?.rateVideo(isPositive = true) }
-                } else {
+                if (state is WebsiteState.Success) {
                     _hanimeVideoFlow.update { it?.rateVideo(isPositive = true) }
                 }
+                _addToFavVideoFlow.tryEmit(state)
             }
         }
     }
@@ -325,15 +326,18 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
                 currentUserId = video.currentUserId,
                 token = csrfToken,
             ).collect { state ->
-                _addToFavVideoFlow.emit(state)
                 if (state is WebsiteState.Success) {
                     _hanimeVideoFlow.update { it?.rateVideo(isPositive) }
                 }
+                _addToFavVideoFlow.tryEmit(state)
             }
         }
     }
 
-    private val _modifyMyListFlow = MutableSharedFlow<WebsiteState<Int>>()
+    private val _modifyMyListFlow = MutableSharedFlow<WebsiteState<Int>>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
     val modifyMyListFlow = _modifyMyListFlow.asSharedFlow()
 
     fun modifyMyList(
@@ -343,13 +347,17 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
         position: Int,
     ) {
         viewModelScope.launch {
-            NetworkRepo.addToMyList(listCode, videoCode, isChecked, position, csrfToken).collect {
-                _modifyMyListFlow.emit(it)
-                _hanimeVideoFlow.update { prev ->
-                    val myList = prev?.myList?.myListInfo.orEmpty().toMutableList()
-                    myList[position] = myList[position].copy(isSelected = isChecked)
-                    prev?.copy(myList = prev.myList?.copy(myListInfo = myList))
+            NetworkRepo.addToMyList(listCode, videoCode, isChecked, position, csrfToken).collect { state ->
+                if (state is WebsiteState.Success) {
+                    _hanimeVideoFlow.update { prev ->
+                        val myList = prev?.myList?.myListInfo.orEmpty().toMutableList()
+                        if (position in myList.indices) {
+                            myList[position] = myList[position].copy(isSelected = isChecked)
+                        }
+                        prev?.copy(myList = prev.myList?.copy(myListInfo = myList))
+                    }
                 }
+                _modifyMyListFlow.tryEmit(state)
             }
         }
     }
