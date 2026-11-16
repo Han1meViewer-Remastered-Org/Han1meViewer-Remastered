@@ -58,6 +58,7 @@ import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
 import com.yenaly.han1meviewer.logic.exception.ParseException
 import com.yenaly.han1meviewer.logic.model.SearchOption
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
+import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.bridge.VideoPageHost
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
@@ -534,6 +535,20 @@ fun VideoRouteHostScreen(
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
             viewModel.modifyHKeyframeFlow.collect { (_, reason) ->
                 showShortToast(reason)
+            }
+        }
+    }
+
+    LaunchedEffect(viewModel) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.subscribeArtistFlow.collect { state ->
+                when (state) {
+                    is WebsiteState.Error -> showShortToast(R.string.subscribe_failed)
+                    WebsiteState.Loading -> Unit
+                    is WebsiteState.Success -> showShortToast(
+                        if (state.info) R.string.subscribe_success else R.string.unsubscribe_success
+                    )
+                }
             }
         }
     }

@@ -28,6 +28,7 @@ import com.yenaly.yenaly_libs.base.YenalyViewModel
 import com.yenaly.yenaly_libs.utils.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -374,7 +375,10 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
     }
 
     // true代表已关注成功，false代表取消关注成功
-    private val _subscribeArtistFlow = MutableSharedFlow<WebsiteState<Boolean>>()
+    private val _subscribeArtistFlow = MutableSharedFlow<WebsiteState<Boolean>>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
     val subscribeArtistFlow = _subscribeArtistFlow.asSharedFlow()
 
     fun subscribeArtist(
@@ -383,12 +387,12 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
     ) {
         viewModelScope.launch {
             NetworkRepo.subscribeArtist(csrfToken, userId, artistId, true).collect { state ->
-                _subscribeArtistFlow.emit(state)
                 if (state is WebsiteState.Success) {
                     _hanimeVideoFlow.update {
                         it?.copy(artist = it.artist?.copy(post = it.artist.post?.copy(isSubscribed = true)))
                     }
                 }
+                _subscribeArtistFlow.tryEmit(state)
             }
         }
     }
@@ -399,12 +403,12 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
     ) {
         viewModelScope.launch {
             NetworkRepo.subscribeArtist(csrfToken, userId, artistId, false).collect { state ->
-                _subscribeArtistFlow.emit(state)
                 if (state is WebsiteState.Success) {
                     _hanimeVideoFlow.update {
                         it?.copy(artist = it.artist?.copy(post = it.artist.post?.copy(isSubscribed = false)))
                     }
                 }
+                _subscribeArtistFlow.tryEmit(state)
             }
         }
     }

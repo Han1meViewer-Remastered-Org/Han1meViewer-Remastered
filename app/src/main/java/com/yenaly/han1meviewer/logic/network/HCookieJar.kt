@@ -7,10 +7,10 @@ import okhttp3.CookieJar
 import okhttp3.HttpUrl
 
 /**
- * 用於管理 Cookie。
+ * 用于管理 Cookie。
  *
- * 响应里带回的 Cookie 只按主机暂存。登录 Cookie 和 cf_clearance 每次请求从偏好设置合并，
- * 同名时以偏好设置为准，避免和暂存表叠成两份。
+ * 偏好设置里的登录 Cookie 和 cf_clearance 作为底。服务器随后下发的同名 Cookie 覆盖它们，
+ * 否则关注请求会带着已经换掉的旧会话。
  */
 class HCookieJar : CookieJar {
 
@@ -22,17 +22,20 @@ class HCookieJar : CookieJar {
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val host = url.host
         val merged = LinkedHashMap<String, Cookie>()
-        cookieMap[host]?.forEach { cookie -> merged[cookie.name] = cookie }
         Preferences.loginCookieStateFlow.value.toLoginCookieList(host).forEach { cookie ->
             merged[cookie.name] = cookie
         }
         Preferences.cloudFlareCookieStateFlow.value.toLoginCookieList(host).forEach { cookie ->
             merged[cookie.name] = cookie
         }
+        cookieMap[host]?.forEach { cookie -> merged[cookie.name] = cookie }
         return merged.values.toList()
     }
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        cookieMap[url.host] = cookies.toMutableList()
+        val merged = LinkedHashMap<String, Cookie>()
+        cookieMap[url.host]?.forEach { cookie -> merged[cookie.name] = cookie }
+        cookies.forEach { cookie -> merged[cookie.name] = cookie }
+        cookieMap[url.host] = merged.values.toMutableList()
     }
 }
