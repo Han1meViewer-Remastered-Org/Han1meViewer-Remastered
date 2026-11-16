@@ -45,7 +45,9 @@ jobs:
           mv keystore.jks $HOME/.android/keystore.jks
 
       - name: Build and sign APK with Gradle
-        run: ./gradlew assembleRelease
+        run: |
+          sed -i 's/^org\.gradle\.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8/' gradle.properties
+          ./gradlew assembleRelease --stacktrace
         env:
           KEYSTORE_PASSWORD: ${{ secrets.YOUR_KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.YOUR_KEYSTORE_PASSWORD }}
