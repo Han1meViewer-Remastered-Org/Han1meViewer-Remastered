@@ -19,8 +19,6 @@ import android.util.Log;
 import android.view.ViewConfiguration;
 import android.view.Window;
 import cn.jzvd.Jzvd;
-import java.util.Formatter;
-import java.util.Locale;
 
 public class JZUtils {
     public static final String TAG = "JZVD";
@@ -34,12 +32,17 @@ public class JZUtils {
         int seconds = (int)(totalSeconds % 60L);
         int minutes = (int)(totalSeconds / 60L % 60L);
         int hours = (int)(totalSeconds / 3600L);
-        StringBuilder stringBuilder = new StringBuilder();
-        Formatter mFormatter = new Formatter(stringBuilder, Locale.getDefault());
         if (hours > 0) {
-            return mFormatter.format("%d:%02d:%02d", hours, minutes, seconds).toString();
+            return hours + ":" + twoDigits(minutes) + ":" + twoDigits(seconds);
         }
-        return mFormatter.format("%02d:%02d", minutes, seconds).toString();
+        return twoDigits(minutes) + ":" + twoDigits(seconds);
+    }
+
+    private static String twoDigits(int value) {
+        if (value < 10) {
+            return "0" + value;
+        }
+        return Integer.toString(value);
     }
 
     public static boolean isWifiConnected(Context context) {

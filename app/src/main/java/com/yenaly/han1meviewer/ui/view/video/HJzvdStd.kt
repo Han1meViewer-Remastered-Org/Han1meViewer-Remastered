@@ -66,7 +66,6 @@ import com.yenaly.yenaly_libs.utils.navBarHeight
 import com.yenaly.yenaly_libs.utils.statusBarHeight
 import com.yenaly.yenaly_libs.utils.unsafeLazy
 import com.yenaly.yenaly_libs.utils.view.removeItself
-import java.util.Timer
 import kotlin.math.absoluteValue
 
 /**
@@ -257,6 +256,14 @@ class HJzvdStd @JvmOverloads constructor(
     private val hideResumeBtnRunnable  = Runnable {
         btnResumeProgress.visibility = GONE
     }
+    private var progressTicking = false
+    private val progressTick = Runnable { tickProgress() }
+    private val dismissControls = Runnable { dissmissControlView() }
+    private var drawnProgress = Int.MIN_VALUE
+    private var drawnSecond = Long.MIN_VALUE
+    private var drawnDuration = Long.MIN_VALUE
+    private var drawnBuffer = -1
+    private var countdownKey: String? = null
     private var hasRestoredProgress  = false
     lateinit var orientationManager: OrientationManager
     private lateinit var superResolution: TextView
@@ -1062,52 +1069,114 @@ class HJzvdStd @JvmOverloads constructor(
         }
     }
 
-    // 原來是 300 period 我改成了 100 爲了計時準確
+    // 原來是 300 period 我改成了 100 爲了計時準確。改在主線程計時，不再為每次刷新另開 Timer 線程。
     override fun startProgressTimer() {
         Log.i(TAG, "startProgressTimer: " + " [" + this.hashCode() + "] ")
         cancelProgressTimer()
-        UPDATE_PROGRESS_TIMER = Timer()
-        mProgressTimerTask = ProgressTimerTask()
-        UPDATE_PROGRESS_TIMER.schedule(mProgressTimerTask, 0, 100)
+        progressTicking = true
+        handler.post(progressTick)
+    }
+
+    override fun cancelProgressTimer() {
+        progressTicking = false
+        handler.removeCallbacks(progressTick)
+        super.cancelProgressTimer()
+    }
+
+    private fun tickProgress() {
+        if (state == STATE_PLAYING || state == STATE_PAUSE || state == STATE_PREPARING_PLAYING) {
+            val position = currentPositionWhenPlaying
+            val videoDuration = getDuration()
+            val progress = (position * 100 / if (videoDuration == 0L) 1L else videoDuration).toInt()
+            onProgress(progress, position, videoDuration)
+        }
+        if (progressTicking) {
+            handler.postDelayed(progressTick, 100)
+        }
+    }
+
+    override fun startDismissControlViewTimer() {
+        cancelDismissControlViewTimer()
+        handler.postDelayed(dismissControls, 2500)
+    }
+
+    override fun cancelDismissControlViewTimer() {
+        handler.removeCallbacks(dismissControls)
+    }
+
+    override fun resetProgressAndTime() {
+        drawnProgress = Int.MIN_VALUE
+        drawnSecond = Long.MIN_VALUE
+        drawnDuration = Long.MIN_VALUE
+        drawnBuffer = 0
+        countdownKey = null
+        super.resetProgressAndTime()
+    }
+
+    override fun setBufferProgress(bufferProgress: Int) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            post { setBufferProgress(bufferProgress) }
+            return
+        }
+        if (bufferProgress == drawnBuffer) return
+        drawnBuffer = bufferProgress
+        super.setBufferProgress(bufferProgress)
     }
 
     override fun onProgress(progress: Int, position: Long, duration: Long) {
-        super.onProgress(progress, position, duration)
+        val second = position / 1000
+        if (progress != drawnProgress || second != drawnSecond || duration != drawnDuration || seekToManulPosition != -1) {
+            super.onProgress(progress, position, duration)
+            drawnProgress = progress
+            drawnSecond = second
+            drawnDuration = duration
+        }
         if (screen == SCREEN_FULLSCREEN) hKeyframe?.let {
-            var match = false
-            for ((index, kf) in it.keyframes.withIndex()) {
-                val interval = kf.position - position
-                if (interval in 0L..<userDefWhenCountdownRemind) {
-                    val timeLong = interval / 1_000L
-                    val spannable = spannable {
+            updateKeyframeCountdown(position, it.keyframes)
+        } ?: run {
+            countdownKey = null
+            if (!tvTimer.isInvisible) tvTimer.isInvisible = true
+        }
+    }
+
+    private fun updateKeyframeCountdown(position: Long, keyframes: List<HKeyframeEntity.Keyframe>) {
+        var match = false
+        for ((index, kf) in keyframes.withIndex()) {
+            val interval = kf.position - position
+            if (interval in 0L..<userDefWhenCountdownRemind) {
+                val timeLong = interval / 1_000L
+                val time = if (timeLong >= 1) {
+                    (timeLong + 1).toString()
+                } else {
+                    "%.1f".format(interval / 1_000F)
+                }
+                val prompt = if (userDefShowCommentWhenCountdown && !kf.prompt.isNullOrBlank()) kf.prompt else ""
+                val key = "$index|$time|${userDefShowCommentWhenCountdown}|$prompt"
+                match = true
+                if (key != countdownKey) {
+                    countdownKey = key
+                    tvTimer.text = spannable {
                         if (userDefShowCommentWhenCountdown) {
                             "#${index + 1}".span {
                                 relativeSize(proportion = 0.7F)
                             }
-                            if (!kf.prompt.isNullOrBlank()) {
-                                " ${kf.prompt}".span {
+                            if (prompt.isNotEmpty()) {
+                                " $prompt".span {
                                     relativeSize(proportion = 0.7F)
                                 }
                             }
                             newline()
                         }
-                        val time = if (timeLong >= 1) {
-                            (timeLong + 1).toString()
-                        } else {
-                            val timeFloat = interval / 1_000F
-                            "%.1f".format(timeFloat)
-                        }
                         time.span {
                             style(Typeface.BOLD)
                         }
                     }
-                    tvTimer.text = spannable
-                    match = true
-                    break
                 }
+                break
             }
-            tvTimer.isInvisible = !match
-        } ?: run { tvTimer.isInvisible = true }
+        }
+        if (!match) countdownKey = null
+        if (tvTimer.isInvisible == match) tvTimer.isInvisible = !match
     }
 
     private fun changeUiToPreparingPlayingClear() {

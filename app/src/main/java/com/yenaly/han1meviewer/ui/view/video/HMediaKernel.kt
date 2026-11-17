@@ -42,9 +42,6 @@ import com.yenaly.han1meviewer.util.AnimeShaders
 import com.yenaly.han1meviewer.util.AnimeShaders.getCert
 import com.yenaly.yenaly_libs.utils.showShortToast
 import `is`.xyz.mpv.MPVLib
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.absoluteValue
 
 /**
@@ -117,6 +114,21 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     private var callback: Runnable? = null
     private var prevSeek = 0L
 
+    @Volatile private var cachedPosition = 0L
+    @Volatile private var cachedDuration = 0L
+    @Volatile private var cachedPlayWhenReady = false
+
+    private val samplePlayback: Runnable = object : Runnable {
+        override fun run() {
+            val player = _exoPlayer ?: return
+            cachedPosition = player.currentPosition.coerceAtLeast(0L)
+            val duration = player.duration
+            cachedDuration = if (duration > 0) duration else 0L
+            cachedPlayWhenReady = player.playWhenReady
+            mMediaHandler?.postDelayed(this, 50)
+        }
+    }
+
     override var videoRealWidth: Int = 0
         private set
     override var videoRealHeight: Int = 0
@@ -186,6 +198,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
             exoPlayer.setMediaSource(videoSource)
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
+            samplePlayback.run()
 //            callback = OnBufferingUpdate()
 
             val surfaceTexture = jzvd.textureView?.surfaceTexture
@@ -210,8 +223,8 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         Log.i("JZVD-onVideoSizeChanged","realWidth:$realWidth,realHeight:$realHeight")
         handler.post {
             jzvd.onVideoSizeChanged(realWidth.toInt(), realHeight)
+            (jzvd as? HJzvdStd)?.updateFullscreenOrientation(realWidth, realHeight.toFloat())
         }
-        (jzvd as? HJzvdStd)?.updateFullscreenOrientation(realWidth, realHeight.toFloat())
     }
 
     override fun onRenderedFirstFrame() {
@@ -224,23 +237,18 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         }
     }
 
-    override fun isPlaying(): Boolean {
-        return runOnPlayerThread{
-         //   _exoPlayer?.playWhenReady ?: false
-            _exoPlayer?.playWhenReady
-        } == true
-      //  return isActuallyPlaying
-    }
+    override fun isPlaying(): Boolean = cachedPlayWhenReady
 
     override fun seekTo(time: Long) {
         mMediaHandler?.post {
             if (time != prevSeek) {
                 _exoPlayer?.let { exoPlayer ->
                     if (time >= exoPlayer.bufferedPosition) {
-                        jzvd.onStatePreparingPlaying()
+                        jzvd.post { jzvd.onStatePreparingPlaying() }
                     }
                     exoPlayer.seekTo(time)
                     exoPlayer.playWhenReady = true
+                    cachedPlayWhenReady = true
                     prevSeek = time
                     jzvd.seekToInAdvance = time
                 }
@@ -254,51 +262,20 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
             val tmpMediaPlayer = exoPlayer
             SAVED_SURFACE = null
             mMediaHandler?.post {
+                mMediaHandler?.removeCallbacks(samplePlayback)
                 tmpMediaPlayer.release() //release就不能放到主线程里，界面会卡顿
                 tmpHandlerThread.quit()
                 _exoPlayer = null
+                cachedPosition = 0L
+                cachedDuration = 0L
+                cachedPlayWhenReady = false
             }
         }
     }
 
+    override fun getCurrentPosition(): Long = cachedPosition
 
-
-    // 在类里加一个工具方法，用来在线程里同步访问ExoPlayer
-
-    inline fun <T> runOnPlayerThread(crossinline block: () -> T?): T? {
-        if (Looper.myLooper() == mMediaHandler?.looper) {
-            return block()
-        }
-
-        val result = AtomicReference<T?>()
-        val latch = CountDownLatch(1)
-
-        mMediaHandler?.post {
-            try {
-                result.set(block())
-            } finally {
-                latch.countDown()
-            }
-        }
-
-        val finished = latch.await(300, TimeUnit.MILLISECONDS)
-        return if (finished) result.get() else null
-    }
-
-
-
-    override fun getCurrentPosition(): Long {
-        return runOnPlayerThread {
-            _exoPlayer?.currentPosition
-        } ?: 0L
-    }
-
-
-    override fun getDuration(): Long {
-        return runOnPlayerThread {
-            _exoPlayer?.duration
-        } ?: 0L
-    }
+    override fun getDuration(): Long = cachedDuration
 
 
 
@@ -337,6 +314,8 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
 
     override fun onPlaybackStateChanged(playbackState: Int) {
         Log.i(TAG, "onPlaybackStateChanged: $playbackState")
+        val playWhenReady = _exoPlayer?.playWhenReady == true
+        cachedPlayWhenReady = playWhenReady
         handler?.post {
             when (playbackState) {
                 Player.STATE_BUFFERING -> {
@@ -345,12 +324,9 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
                 }
 
                 Player.STATE_READY -> {
-
-                    runOnPlayerThread {
-                        Log.i(TAG, "STATE_READY, playWhenReady=${_exoPlayer?.playWhenReady}")
-                        if (_exoPlayer?.playWhenReady == true){
-                            jzvd.onStatePlaying()
-                        }
+                    Log.i(TAG, "STATE_READY, playWhenReady=$playWhenReady")
+                    if (playWhenReady) {
+                        jzvd.onStatePlaying()
                     }
                 }
 
@@ -385,14 +361,12 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         reason: Int,
     ) {
         if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+            val playWhenReady = _exoPlayer?.playWhenReady == true
             handler?.post {
                 jzvd.onSeekComplete()
-                runOnPlayerThread {
-                    if (_exoPlayer?.playWhenReady==true) {
-                        jzvd.onStatePlaying()
-                    }
+                if (playWhenReady) {
+                    jzvd.onStatePlaying()
                 }
-
             }
         }
     }
@@ -506,6 +480,7 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
         get() = MPVLib.getPropertyInt("video-params/h") ?: 0
 
     private var mpvTimePos: Double = 0.0
+    private var lastMpvBuffer = -1
     private var mpvCacheDuration: Double = 0.0
     private var mpvDuration: Double = 0.0
     private var currentPfd: ParcelFileDescriptor? = null
@@ -741,15 +716,9 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
         SAVED_SURFACE = null
     }
 
-    override fun getCurrentPosition(): Long {
-        val timePosSeconds = MPVLib.getPropertyDouble("time-pos")
-        return (timePosSeconds ?: 0.0).toLong() * 1000
-    }
+    override fun getCurrentPosition(): Long = (mpvTimePos * 1000).toLong()
 
-    override fun getDuration(): Long {
-        val durationSeconds = MPVLib.getPropertyDouble("duration")
-        return (durationSeconds ?: 0.0).toLong() * 1000
-    }
+    override fun getDuration(): Long = (mpvDuration * 1000).toLong()
 
     override fun setVolume(leftVolume: Float, rightVolume: Float) {
         val volume = (leftVolume + rightVolume) / 2 * 100
@@ -836,8 +805,11 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
                 val bufferedTime = mpvTimePos + mpvCacheDuration
                 val safeBufferedTime = bufferedTime.coerceAtMost(mpvDuration)
                 val bufferPercent = ((safeBufferedTime / mpvDuration) * 100).toInt()
-                handler.post {
-                    jzvd.setBufferProgress(bufferPercent)
+                if (bufferPercent != lastMpvBuffer) {
+                    lastMpvBuffer = bufferPercent
+                    handler.post {
+                        jzvd.setBufferProgress(bufferPercent)
+                    }
                 }
             }
 
@@ -851,6 +823,7 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
                         mpvTimePos = 0.0
                         mpvCacheDuration = 0.0
                         mpvDuration = 0.0
+                        lastMpvBuffer = -1
                         jzvd.onStatePreparing()
                     }
                     MPVLib.mpvEventId.MPV_EVENT_FILE_LOADED -> {
