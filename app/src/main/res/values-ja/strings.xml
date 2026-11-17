@@ -975,4 +975,7 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="cf_manual_cleared">手動認証情報をクリアしました</string>
     <string name="cf_manual_import_setting_title">Cloudflare 手動認証</string>
     <string name="cf_manual_import_setting_summary">旧端末でアプリ内認証ができない場合、cf_clearance と User-Agent を手動で取り込みます</string>
+    <string name="player_tips_not_wifi">あなたは現在、モバイルネットワークを使用しています</string>
+    <string name="player_tips_not_wifi_confirm">ビデオを再開する</string>
+    <string name="player_tips_not_wifi_cancel">ビデオを止める</string>
 </resources>

@@ -5,7 +5,6 @@ import android.app.PictureInPictureParams
 import android.app.RemoteAction
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Rect
 import android.graphics.drawable.Icon
@@ -39,7 +38,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import cn.jzvd.Jzvd
 import coil.load
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.CollapsingToolbarLayout
@@ -157,7 +155,7 @@ fun VideoRouteHostScreen(
     val jzBackCallback = remember(activity) {
         object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
-                if (!Jzvd.backPress()) {
+                if (!player.consumeBackPress()) {
                     isEnabled = false
                     activity.onBackPressedDispatcher.onBackPressed()
                 }
@@ -193,18 +191,11 @@ fun VideoRouteHostScreen(
     }
 
     fun changeScreenNormal() {
-        if (player.screen == Jzvd.SCREEN_FULLSCREEN) {
-            player.gotoNormalScreen()
-        }
+        player.exitFullscreenIfNeeded()
     }
 
     fun changeScreenFullLandscape(orientation: OrientationManager.ScreenOrientation) {
-        if (player.screen != Jzvd.SCREEN_FULLSCREEN &&
-            System.currentTimeMillis() - Jzvd.lastAutoFullscreenTime > 2000
-        ) {
-            player.autoFullscreen(orientation)
-            Jzvd.lastAutoFullscreenTime = System.currentTimeMillis()
-        }
+        player.tryAutoFullscreen(orientation)
     }
 
     val pageHost = remember(activity, player, shell, viewModel) {
@@ -214,7 +205,7 @@ fun VideoRouteHostScreen(
             }
 
             override fun shouldEnterPip(): Boolean {
-                return player.state == Jzvd.STATE_PLAYING || player.state == Jzvd.STATE_PAUSE
+                return player.canEnterPip()
             }
 
             override fun enterPipMode() {
@@ -339,22 +330,17 @@ fun VideoRouteHostScreen(
             player.onKeyframeClickListener = null
             player.onKeyframeLongClickListener = null
             shell.clear()
-            Jzvd.releaseAllVideos()
+            player.releaseOwnedVideos()
         }
     }
 
     DisposableEffect(lifecycleOwner, activity, player, shell, route.videoCode) {
         val orientationManager = OrientationManager(activity) { orientation ->
-            if (!Preferences.tabletMode &&
-                Jzvd.CURRENT_JZVD != null &&
-                (player.state == Jzvd.STATE_PLAYING || player.state == Jzvd.STATE_PAUSE) &&
-                player.screen != Jzvd.SCREEN_TINY &&
-                Jzvd.FULLSCREEN_ORIENTATION != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            ) {
-                if (orientation.isLandscape && player.screen == Jzvd.SCREEN_NORMAL) {
+            if (!Preferences.tabletMode && player.followsDeviceOrientation()) {
+                if (orientation.isLandscape && player.isNormalScreen) {
                     changeScreenFullLandscape(orientation)
                 } else if (orientation == OrientationManager.ScreenOrientation.PORTRAIT &&
-                    player.screen == Jzvd.SCREEN_FULLSCREEN
+                    player.isFullscreen
                 ) {
                     changeScreenNormal()
                 }
@@ -373,7 +359,7 @@ fun VideoRouteHostScreen(
                     if (!activity.isInPictureInPictureMode) {
                         changeScreenNormal()
                     }
-                    Jzvd.goOnPlayOnPause()
+                    player.pauseWhenStopped()
                 }
                 else -> Unit
             }
@@ -402,8 +388,8 @@ fun VideoRouteHostScreen(
             }
         }
         player.onVideoStateChanged = { state ->
-            when (state) {
-                Jzvd.STATE_PLAYING, Jzvd.STATE_PREPARING -> {
+            when (player.pageScrollLocked(state)) {
+                true -> {
                     viewModel.setScrollDisabled(true)
                     shell.withBehavior { behavior ->
                         behavior.disableScroll = true
@@ -411,12 +397,14 @@ fun VideoRouteHostScreen(
                     shell.setExpanded(expanded = true, animate = true)
                 }
 
-                Jzvd.STATE_PAUSE, Jzvd.STATE_AUTO_COMPLETE -> {
+                false -> {
                     viewModel.setScrollDisabled(false)
                     shell.withBehavior { behavior ->
                         behavior.disableScroll = false
                     }
                 }
+
+                null -> Unit
             }
         }
         player.fullscreenListener = object : HJzvdStd.FullscreenListener {
@@ -492,9 +480,8 @@ fun VideoRouteHostScreen(
                                 activity.browse(getHanimeVideoLink(route.videoCode))
                             }
                         } else {
-                            player.setUp(
+                            player.setUpNormal(
                                 HanimeDataSource(state.info.title, state.info.videoUrls),
-                                Jzvd.SCREEN_NORMAL,
                                 kernel,
                             )
                         }

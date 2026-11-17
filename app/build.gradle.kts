@@ -188,7 +188,6 @@ dependencies {
 
     // video
 
-    implementation(libs.jiaozi.video.player)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.mpv.lib)

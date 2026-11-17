@@ -1024,4 +1024,7 @@
     <string name="cf_manual_cleared">已清除手動驗證資訊</string>
     <string name="cf_manual_import_setting_title">Cloudflare 手動驗證</string>
     <string name="cf_manual_import_setting_summary">舊裝置無法在應用內完成驗證時，手動匯入 cf_clearance 與 User-Agent</string>
+    <string name="player_tips_not_wifi">您目前正在使用行動網路，繼續播放將消耗流量</string>
+    <string name="player_tips_not_wifi_confirm">繼續播放</string>
+    <string name="player_tips_not_wifi_cancel">停止播放</string>
 </resources>

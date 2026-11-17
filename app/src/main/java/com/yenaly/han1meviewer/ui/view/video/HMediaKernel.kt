@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.ui.view.video
 
 import android.content.Context
-import android.content.pm.ActivityInfo
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.media.PlaybackParams
@@ -56,6 +55,13 @@ import kotlin.math.absoluteValue
 sealed interface HMediaKernel {
     val videoRealWidth: Int
     val videoRealHeight: Int
+
+    fun applySuperResolution(index: Int) = Unit
+
+    val resizesSurface: Boolean
+        get() = false
+
+    fun updateSurfaceSize(width: Int, height: Int) = Unit
 
     enum class Type(val clazz: Class<out JZMediaInterface>) {
         MediaPlayer(SystemMediaKernel::class.java),
@@ -205,12 +211,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         handler.post {
             jzvd.onVideoSizeChanged(realWidth.toInt(), realHeight)
         }
-        val ratio = realWidth / realHeight // > 1 橫屏， < 1 竖屏
-        if (ratio > 1) {
-            Jzvd.FULLSCREEN_ORIENTATION = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        } else {
-            Jzvd.FULLSCREEN_ORIENTATION = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
+        (jzvd as? HJzvdStd)?.updateFullscreenOrientation(realWidth, realHeight.toFloat())
     }
 
     override fun onRenderedFirstFrame() {
@@ -474,12 +475,7 @@ class SystemMediaKernel(jzvd: Jzvd) : JZMediaSystem(jzvd), HMediaKernel {
 
     override fun onVideoSizeChanged(mediaPlayer: MediaPlayer?, width: Int, height: Int) {
         super.onVideoSizeChanged(mediaPlayer, width, height)
-        val ratio = width.toFloat() / height // > 1 橫屏， < 1 竖屏
-        if (ratio > 1) {
-            Jzvd.FULLSCREEN_ORIENTATION = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        } else {
-            Jzvd.FULLSCREEN_ORIENTATION = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
+        (jzvd as? HJzvdStd)?.updateFullscreenOrientation(width.toFloat(), height.toFloat())
     }
 
     // #issue-139: 部分机型暂停报错，没判空导致的
@@ -500,6 +496,9 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
     companion object {
         const val TAG = "MpvMediaKernel"
     }
+    override val resizesSurface: Boolean
+        get() = true
+
     override val videoRealWidth: Int
         get() = MPVLib.getPropertyInt("video-params/w") ?: 0
 
@@ -774,6 +773,10 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
         }
     }
 
+    override fun updateSurfaceSize(width: Int, height: Int) {
+        updateSurFaceSize(width, height)
+    }
+
     fun updateSurFaceSize(width: Int, height: Int) {
         Log.d(TAG, "updateSurFaceSize ${width}x${height}")
         MPVLib.setPropertyString("android-surface-size", "${width}x${height}")
@@ -792,6 +795,10 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
     private fun clearSuperResolution() {
         MPVLib.command(arrayOf("change-list", "glsl-shaders", "clr", ""))
     }
+    override fun applySuperResolution(index: Int) {
+        setSuperResolution(index)
+    }
+
     fun setSuperResolution(index: Int) {
         if (index != 0) {
             val cmd = arrayOf("change-list", "glsl-shaders", "set", AnimeShaders.getShader(jzvd.context, index))

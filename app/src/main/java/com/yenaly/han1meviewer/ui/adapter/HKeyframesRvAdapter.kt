@@ -5,7 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
-import cn.jzvd.JZUtils
+import com.yenaly.han1meviewer.ui.view.video.playbackTimeText
 import com.chad.library.adapter4.BaseQuickAdapter
 import com.chad.library.adapter4.viewholder.QuickViewHolder
 import com.google.android.material.button.MaterialButton
@@ -61,7 +61,7 @@ class HKeyframeRvAdapter(
         item: HKeyframeEntity.Keyframe?,
     ) {
         item ?: return
-        holder.setText(R.id.tv_keyframe, JZUtils.stringForTime(item.position))
+        holder.setText(R.id.tv_keyframe, playbackTimeText(item.position))
         holder.setText(R.id.tv_index, "#${holder.bindingAdapterPosition + 1}")
 
         holder.setGone(R.id.btn_delete, !isLocal)
@@ -117,7 +117,7 @@ class HKeyframeRvAdapter(
                     val activity = context.findActivityOrNull<MainActivity>() ?: return@setOnClickListener
                     it.context.showAlertDialog {
                         setTitle(R.string.sure_to_delete)
-                        setMessage(JZUtils.stringForTime(item.position))
+                        setMessage(playbackTimeText(item.position))
                         setPositiveButton(R.string.confirm) { _, _ ->
                             activity.viewModel.removeHKeyframe(videoCode, item)
                             showShortToast(R.string.delete_success)

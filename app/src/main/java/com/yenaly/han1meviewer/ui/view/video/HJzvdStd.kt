@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.ui.view.video
 
 import android.annotation.SuppressLint
+import android.content.pm.ActivityInfo
 import android.content.res.ColorStateList
 import android.content.Context
 import android.graphics.Color
@@ -43,7 +44,7 @@ import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import cn.jzvd.JZDataSource
-import cn.jzvd.JZUtils
+import cn.jzvd.Jzvd
 import cn.jzvd.JzvdStd
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.MaterialColors
@@ -238,10 +239,7 @@ class HJzvdStd @JvmOverloads constructor(
             } else {
                 superResolution.text = context.getString(R.string.anime_4k)
             }
-            if (mediaInterface is MpvMediaKernel) {
-                val kernel = mediaInterface as MpvMediaKernel
-                kernel.setSuperResolution(value)
-            }
+            (mediaInterface as? HMediaKernel)?.applySuperResolution(value)
         }
 
     private lateinit var tvSpeed: TextView
@@ -446,6 +444,59 @@ class HJzvdStd @JvmOverloads constructor(
 
     fun setUp(jzDataSource: JZDataSource?, screen: Int, kernel: HMediaKernel.Type) {
         setUp(jzDataSource, screen, kernel.clazz)
+    }
+
+    fun setUpNormal(jzDataSource: JZDataSource?, kernel: HMediaKernel.Type) {
+        setUp(jzDataSource, SCREEN_NORMAL, kernel)
+    }
+
+    fun consumeBackPress(): Boolean = Jzvd.backPress()
+
+    fun releaseOwnedVideos() {
+        Jzvd.releaseAllVideos()
+    }
+
+    fun pauseWhenStopped() {
+        Jzvd.goOnPlayOnPause()
+    }
+
+    val isFullscreen: Boolean
+        get() = screen == SCREEN_FULLSCREEN
+
+    val isNormalScreen: Boolean
+        get() = screen == SCREEN_NORMAL
+
+    fun canEnterPip(): Boolean = state == STATE_PLAYING || state == STATE_PAUSE
+
+    fun followsDeviceOrientation(): Boolean {
+        return Jzvd.CURRENT_JZVD != null &&
+            canEnterPip() &&
+            screen != SCREEN_TINY &&
+            Jzvd.FULLSCREEN_ORIENTATION != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    }
+
+    fun tryAutoFullscreen(orientation: OrientationManager.ScreenOrientation) {
+        if (isFullscreen || System.currentTimeMillis() - Jzvd.lastAutoFullscreenTime <= 2000) return
+        autoFullscreen(orientation)
+        Jzvd.lastAutoFullscreenTime = System.currentTimeMillis()
+    }
+
+    fun exitFullscreenIfNeeded() {
+        if (isFullscreen) gotoNormalScreen()
+    }
+
+    fun updateFullscreenOrientation(width: Float, height: Float) {
+        Jzvd.FULLSCREEN_ORIENTATION = if (height > 0f && width / height > 1f) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    fun pageScrollLocked(state: Int): Boolean? = when (state) {
+        STATE_PLAYING, STATE_PREPARING -> true
+        STATE_PAUSE, STATE_AUTO_COMPLETE -> false
+        else -> null
     }
     fun setControlsVisible(visible: Boolean) {
         findViewById<View>(R.id.tv_speed)?.isVisible = visible
@@ -700,8 +751,8 @@ class HJzvdStd @JvmOverloads constructor(
         }
 
         this.clarityPopWindow =
-            PopupWindow(layout, JZUtils.dip2px(this.jzvdContext, 240.0f), -1, true)
-        this.clarityPopWindow.animationStyle = cn.jzvd.R.style.pop_animation
+            PopupWindow(layout, playerDip(this.jzvdContext, 240.0f), -1, true)
+        this.clarityPopWindow.animationStyle = R.style.player_pop_animation
         this.clarityPopWindow.contentView = layout
         this.clarityPopWindow.showAtLocation(this.textureViewContainer, 8388613, 0, 0)
     }
@@ -731,11 +782,11 @@ class HJzvdStd @JvmOverloads constructor(
         val inflater = LayoutInflater.from(context).inflate(R.layout.jz_layout_speed, null)
         val rv = inflater.findViewById<RecyclerView>(R.id.rv_video_speed)
         val popup = PopupWindow(
-            inflater, JZUtils.dip2px(jzvdContext, 240f),
+            inflater, playerDip(jzvdContext, 240f),
             LayoutParams.MATCH_PARENT, true
         ).apply {
             contentView = inflater
-            animationStyle = cn.jzvd.R.style.pop_animation
+            animationStyle = R.style.player_pop_animation
         }
         rv.layoutManager = LinearLayoutManager(context)
         rv.adapter = SuperResolutionAdapter(superResolutionIndex,getSuperResolutionArray().toList()).apply {
@@ -775,11 +826,11 @@ class HJzvdStd @JvmOverloads constructor(
         val absDeltaX = deltaX.absoluteValue
         val absDeltaY = deltaY.absoluteValue
         // 此處進行了修改，未全屏也能調節進度
-        Log.d(TAG, "mDownX=$mDownX, screenWidth=${JZUtils.getScreenWidth(context)}")
+        Log.d(TAG, "mDownX=$mDownX, screenWidth=${playerScreenWidth(context)}")
         if (screen != SCREEN_TINY && !isSpeedGestureDetected) {
             //拖动的是NavigationBar和状态栏
             if (mDownX > appScreenWidth
-                || mDownY < JZUtils.getStatusBarHeight(context)
+                || mDownY < playerStatusBarHeight(context)
             ) {
                 return
             }
@@ -799,7 +850,7 @@ class HJzvdStd @JvmOverloads constructor(
                         if (mDownX < appScreenWidth * 0.5f) { //左侧改变亮度
                             mChangeBrightness = true
                             isAdjustBrightness = true
-                            val lp = JZUtils.getWindow(context).attributes
+                            val lp = playerWindow(context)!!.attributes
                             if (lp.screenBrightness < 0) {
                                 try {
                                     mGestureDownBrightness = Settings.System.getInt(
@@ -839,8 +890,8 @@ class HJzvdStd @JvmOverloads constructor(
                 (mGestureDownPosition + deltaX * totalTimeDuration / (mScreenWidth * userDefSlideSensitivity)).toLong()
             if (mSeekTimePosition < 0) mSeekTimePosition = 0
             if (mSeekTimePosition > totalTimeDuration) mSeekTimePosition = totalTimeDuration
-            val seekTime = JZUtils.stringForTime(mSeekTimePosition)
-            val totalTime = JZUtils.stringForTime(totalTimeDuration)
+            val seekTime = playbackTimeText(mSeekTimePosition)
+            val totalTime = playbackTimeText(totalTimeDuration)
             showProgressDialog(deltaX, seekTime, mSeekTimePosition, totalTime, totalTimeDuration)
         }
 
@@ -858,7 +909,7 @@ class HJzvdStd @JvmOverloads constructor(
         if (mChangeBrightness) {
             deltaY = -deltaY
             val deltaV = (255 * deltaY * 3 / mScreenHeight).toInt()
-            val params = JZUtils.getWindow(context).attributes
+            val params = playerWindow(context)!!.attributes
             if ((mGestureDownBrightness + deltaV) / 255 >= 1) { //这和声音有区别，必须自己过滤一下负值
                 params.screenBrightness = 1f
             } else if ((mGestureDownBrightness + deltaV) / 255 <= 0) {
@@ -866,7 +917,7 @@ class HJzvdStd @JvmOverloads constructor(
             } else {
                 params.screenBrightness = (mGestureDownBrightness + deltaV) / 255
             }
-            JZUtils.getWindow(context).attributes = params
+            playerWindow(context)!!.attributes = params
             //dialog中显示百分比
             val brightnessPercent =
                 (mGestureDownBrightness * 100 / 255 + deltaY * 3 * 100 / mScreenHeight).toInt()
@@ -880,9 +931,9 @@ class HJzvdStd @JvmOverloads constructor(
     override fun gotoNormalScreen() {
         gobakFullscreenTime = System.currentTimeMillis() // 退出全屏时间
         fullscreenListener?.onFullscreenChanged(false)
-        Log.i(TAG,"${isAdjustBrightness}、${screenBrightnessBK}、${JZUtils.getWindow(context).attributes.screenBrightness}")
+        Log.i(TAG,"${isAdjustBrightness}、${screenBrightnessBK}、${playerWindow(context)!!.attributes.screenBrightness}")
         if (isAdjustBrightness) {
-            val window = JZUtils.getWindow(context)
+            val window = playerWindow(context)
             if (window != null) {
                 val params = window.attributes
                 params.screenBrightness = screenBrightnessBK.coerceIn(0f, 1f) //恢复亮度
@@ -891,7 +942,7 @@ class HJzvdStd @JvmOverloads constructor(
             isAdjustBrightness = false
         }
         // 从 decorView 移除全屏播放器视图
-        val decorView = (JZUtils.scanForActivity(jzvdContext)).window.decorView as ViewGroup
+        val decorView = playerActivity(jzvdContext)!!.window.decorView as ViewGroup
         decorView.removeView(this)
         // 恢复到原始容器
         val originalContainer = CONTAINER_LIST.lastOrNull()
@@ -915,19 +966,19 @@ class HJzvdStd @JvmOverloads constructor(
         originalContainer.requestLayout()
         // 设置播放器状态并恢复系统UI和方向
         setScreenNormal()
-        JZUtils.showStatusBar(jzvdContext)
-        val activity = JZUtils.scanForActivity(jzvdContext)
+        showPlayerStatusBar(jzvdContext)
+        val activity = playerActivity(jzvdContext)
         if (activity != null) {
             orientationManager.unlockOrientation(activity)
         }
-        JZUtils.showSystemUI(jzvdContext)
+        showPlayerSystemUi(jzvdContext)
     }
 
     override fun gotoFullscreen() {
         gotoFullscreenTime = System.currentTimeMillis()
         fullscreenListener?.onFullscreenChanged(true)
         val vg = parent as? ViewGroup ?: return
-        val activity = JZUtils.scanForActivity(jzvdContext)
+        val activity = playerActivity(jzvdContext)
         jzvdContext = vg.context
 
         // 保存容器与布局信息
@@ -943,7 +994,7 @@ class HJzvdStd @JvmOverloads constructor(
         // 从原来容器中移除播放器
         vg.removeView(this)
         CONTAINER_LIST.push(vg)
-        val decorView = (JZUtils.scanForActivity(jzvdContext)).window.decorView as ViewGroup
+        val decorView = playerActivity(jzvdContext)!!.window.decorView as ViewGroup
         val fullLayout = LayoutParams(
             LayoutParams.MATCH_PARENT,
             LayoutParams.MATCH_PARENT
@@ -966,7 +1017,7 @@ class HJzvdStd @JvmOverloads constructor(
                 .start()
         }
         setScreenFullscreen()
-        JZUtils.hideStatusBar(jzvdContext)
+        hidePlayerStatusBar(jzvdContext)
         if (isPortraitVideo) {
             activity?.let {
                 orientationManager.lockOrientation(
@@ -975,9 +1026,9 @@ class HJzvdStd @JvmOverloads constructor(
                 )
             }
         } else {
-            JZUtils.setRequestedOrientation(jzvdContext, FULLSCREEN_ORIENTATION)
+            playerSetRequestedOrientation(jzvdContext, FULLSCREEN_ORIENTATION)
         }
-        JZUtils.hideSystemUI(jzvdContext)
+        hidePlayerSystemUi(jzvdContext)
     }
 
 
@@ -999,12 +1050,12 @@ class HJzvdStd @JvmOverloads constructor(
     override fun showWifiDialog() {
         jzvdContext.showAlertDialog {
             setTitle(R.string.warning)
-            setMessage(cn.jzvd.R.string.tips_not_wifi)
-            setPositiveButton(cn.jzvd.R.string.tips_not_wifi_confirm) { _, _ ->
+            setMessage(R.string.player_tips_not_wifi)
+            setPositiveButton(R.string.player_tips_not_wifi_confirm) { _, _ ->
                 WIFI_TIP_DIALOG_SHOWED = true
                 if (state == STATE_PAUSE) startButton.performClick() else startVideo()
             }
-            setNegativeButton(cn.jzvd.R.string.tips_not_wifi_cancel) { _, _ ->
+            setNegativeButton(R.string.player_tips_not_wifi_cancel) { _, _ ->
                 releaseAllVideos()
                 clearFloatScreen()
             }
@@ -1135,7 +1186,7 @@ class HJzvdStd @JvmOverloads constructor(
                 playback?.seekTo(seekToInAdvance)
                 seekToInAdvance = 0
             } else {
-                val position = JZUtils.getSavedProgress(context, jzDataSource.currentUrl)
+                val position = savedPlaybackPosition(context, jzDataSource.currentUrl)
                 if (position != 0L) {
                     playback?.seekTo(position) //这里为什么区分开呢，第一次的播放和resume播放是不一样的。 这里怎么区分是一个问题。然后
                 }
@@ -1170,11 +1221,11 @@ class HJzvdStd @JvmOverloads constructor(
         val inflater = LayoutInflater.from(context).inflate(R.layout.jz_layout_speed, null)
         val rv = inflater.findViewById<RecyclerView>(R.id.rv_video_speed)
         val popup = PopupWindow(
-            inflater, JZUtils.dip2px(jzvdContext, 240f),
+            inflater, playerDip(jzvdContext, 240f),
             LayoutParams.MATCH_PARENT, true
         ).apply {
             contentView = inflater
-            animationStyle = cn.jzvd.R.style.pop_animation
+            animationStyle = R.style.player_pop_animation
         }
         rv.layoutManager = LinearLayoutManager(context)
         rv.adapter = VideoSpeedAdapter(currentSpeedIndex).apply {
@@ -1192,11 +1243,11 @@ class HJzvdStd @JvmOverloads constructor(
         val inflater = LayoutInflater.from(context).inflate(R.layout.jz_layout_speed, null)
         val rv = inflater.findViewById<RecyclerView>(R.id.rv_video_speed)
         val popup = PopupWindow(
-            inflater, JZUtils.dip2px(jzvdContext, 240f),
+            inflater, playerDip(jzvdContext, 240f),
             LayoutParams.MATCH_PARENT, true
         ).apply {
             contentView = inflater
-            animationStyle = cn.jzvd.R.style.pop_animation
+            animationStyle = R.style.player_pop_animation
         }
         rv.layoutManager = LinearLayoutManager(v.context)
         val adapter = hKeyframeAdapter
@@ -1236,16 +1287,13 @@ class HJzvdStd @JvmOverloads constructor(
         }
     }
     private fun updateVideoPlayerSize(fullscreen: Boolean) {
-        if (mediaInterface is MpvMediaKernel) {
-            val kernel = mediaInterface as MpvMediaKernel
-            post {
-                if (fullscreen) {
-                    Log.i(TAG, "updateVideoPlayerSize: $width x $height")
-                    kernel.updateSurFaceSize(width, height)
-                } else {
-                    kernel.updateSurFaceSize(width, height)
-                }
+        val kernel = mediaInterface as? HMediaKernel ?: return
+        if (!kernel.resizesSurface) return
+        post {
+            if (fullscreen) {
+                Log.i(TAG, "updateVideoPlayerSize: $width x $height")
             }
+            kernel.updateSurfaceSize(width, height)
         }
     }
 }

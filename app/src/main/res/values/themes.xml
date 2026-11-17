@@ -113,4 +113,9 @@
         <item name="postSplashScreenTheme">@style/Theme.Hanime1.Main</item>
     </style>
 
+    <style name="player_pop_animation">
+        <item name="android:windowEnterAnimation">@anim/player_pop_from_bottom_in</item>
+        <item name="android:windowExitAnimation">@anim/player_pop_from_bottom_out</item>
+    </style>
+
 </resources>
