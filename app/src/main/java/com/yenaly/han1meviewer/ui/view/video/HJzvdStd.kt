@@ -28,6 +28,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.annotation.IntRange
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -133,6 +134,9 @@ class HJzvdStd @JvmOverloads constructor(
          */
         val speedStringArray = Array(speedArray.size) { "${speedArray[it]}x" }
         const val DEF_SUPER_RESOLUTION_INDEX = 0
+
+        /** 进度条刻度。100 格在长片上会一跳好几秒。 */
+        const val PROGRESS_SCALE = 1000
     }
 
     init {
@@ -264,6 +268,7 @@ class HJzvdStd @JvmOverloads constructor(
     private var drawnDuration = Long.MIN_VALUE
     private var drawnBuffer = -1
     private var countdownKey: String? = null
+    private var videoAudioFocus: AudioFocusRequest? = null
     private var hasRestoredProgress  = false
     lateinit var orientationManager: OrientationManager
     private lateinit var superResolution: TextView
@@ -416,6 +421,8 @@ class HJzvdStd @JvmOverloads constructor(
         gestureLock = findViewById(R.id.lock)
         gestureLock.isSelected = false
         textureViewContainer.isHapticFeedbackEnabled = true
+        progressBar.max = PROGRESS_SCALE
+        bottomProgressBar.max = PROGRESS_SCALE
         tvSpeed.setOnClickListener(this)
         tvKeyframe.setOnClickListener(this)
         tvKeyframe.setOnLongClickListener(this)
@@ -549,6 +556,8 @@ class HJzvdStd @JvmOverloads constructor(
             bottomProgressBar.removeItself()
             bottomProgressBar = ProgressBar(context)
         }
+        progressBar.max = PROGRESS_SCALE
+        bottomProgressBar.max = PROGRESS_SCALE
         screenBrightnessBK = try {
             Settings.System.getInt(
                 context.contentResolver,
@@ -573,7 +582,57 @@ class HJzvdStd @JvmOverloads constructor(
                 }
             }
         }
-        return super.onTouch(v, event)
+        val handled = super.onTouch(v, event)
+        if (v.id == R.id.surface_container && event.action == MotionEvent.ACTION_UP && mChangePosition) {
+            val videoDuration = getDuration()
+            val progress = if (videoDuration <= 0L) {
+                0
+            } else {
+                (mSeekTimePosition * PROGRESS_SCALE / videoDuration).toInt()
+            }
+            progressBar.progress = progress
+            bottomProgressBar.progress = progress
+        }
+        return handled
+    }
+
+    override fun touchActionUp() {
+        mTouchingProgressBar = false
+        dismissProgressDialog()
+        dismissVolumeDialog()
+        dismissBrightnessDialog()
+        if (mChangePosition) {
+            mediaInterface?.seekTo(mSeekTimePosition)
+            val videoDuration = getDuration()
+            val progress = if (videoDuration <= 0L) {
+                0
+            } else {
+                (mSeekTimePosition * PROGRESS_SCALE / videoDuration).toInt()
+            }
+            progressBar.progress = progress
+        }
+        startProgressTimer()
+    }
+
+    override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+        if (!fromUser) return
+        val videoDuration = getDuration()
+        currentTimeTextView.text = playbackTimeText(progress.toLong() * videoDuration / PROGRESS_SCALE)
+    }
+
+    override fun onStopTrackingTouch(seekBar: SeekBar) {
+        Log.i(TAG, "bottomProgress onStopTrackingTouch [${hashCode()}] ")
+        startProgressTimer()
+        var parentView = parent
+        while (parentView != null) {
+            parentView.requestDisallowInterceptTouchEvent(false)
+            parentView = parentView.parent
+        }
+        if (state != STATE_PLAYING && state != STATE_PAUSE) return
+        val time = seekBar.progress.toLong() * getDuration() / PROGRESS_SCALE
+        seekToManulPosition = seekBar.progress
+        mediaInterface?.seekTo(time)
+        startDismissControlViewTimer()
     }
 
     fun autoFullscreen(orientation: OrientationManager.ScreenOrientation) {
@@ -1087,7 +1146,11 @@ class HJzvdStd @JvmOverloads constructor(
         if (state == STATE_PLAYING || state == STATE_PAUSE || state == STATE_PREPARING_PLAYING) {
             val position = currentPositionWhenPlaying
             val videoDuration = getDuration()
-            val progress = (position * 100 / if (videoDuration == 0L) 1L else videoDuration).toInt()
+            val progress = if (videoDuration <= 0L) {
+                0
+            } else {
+                (position * PROGRESS_SCALE / videoDuration).toInt().coerceIn(0, PROGRESS_SCALE)
+            }
             onProgress(progress, position, videoDuration)
         }
         if (progressTicking) {
@@ -1235,6 +1298,7 @@ class HJzvdStd @JvmOverloads constructor(
 
     override fun onStatePlaying() {
         Log.i(TAG, "onStatePlaying " + " [" + this.hashCode() + "] ")
+        val enteringPlay = state != STATE_PLAYING
         onVideoStateChanged?.invoke(STATE_PLAYING)
         if (isNeedResumeProgress()) {
             post {
@@ -1245,12 +1309,7 @@ class HJzvdStd @JvmOverloads constructor(
         }
         if (state == STATE_PREPARED) { //如果是准备完成视频后第一次播放，先判断是否需要跳转进度。
             Log.d(TAG, "onStatePlaying:STATE_PREPARED ")
-            mAudioManager =
-                applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                .setOnAudioFocusChangeListener(onAudioFocusChangeListener)
-                .build()
-            mAudioManager.requestAudioFocus(audioFocusRequest)
+            requestVideoAudioFocus()
             if (seekToInAdvance != 0L) {
                 playback?.seekTo(seekToInAdvance)
                 seekToInAdvance = 0
@@ -1267,14 +1326,45 @@ class HJzvdStd @JvmOverloads constructor(
         }
         state = STATE_PLAYING
         startProgressTimer()
-        changeUiToPlayingClearSafe()
+        if (enteringPlay) {
+            changeUiToPlayingClearSafe()
+        }
+    }
+
+    private fun requestVideoAudioFocus() {
+        if (videoAudioFocus != null) return
+        mAudioManager = applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setOnAudioFocusChangeListener(onAudioFocusChangeListener)
+            .build()
+        videoAudioFocus = request
+        mAudioManager.requestAudioFocus(request)
+    }
+
+    private fun abandonVideoAudioFocus() {
+        val request = videoAudioFocus ?: return
+        mAudioManager?.abandonAudioFocusRequest(request)
+        videoAudioFocus = null
+    }
+
+    override fun reset() {
+        abandonVideoAudioFocus()
+        super.reset()
+    }
+
+    override fun onStateError() {
+        abandonVideoAudioFocus()
+        super.onStateError()
     }
     override fun onStatePause() {
         super.onStatePause()
         onVideoStateChanged?.invoke(STATE_PAUSE)
     }
     override fun onStateAutoComplete() {
+        abandonVideoAudioFocus()
         super.onStateAutoComplete()
+        progressBar.progress = PROGRESS_SCALE
+        bottomProgressBar.progress = PROGRESS_SCALE
         onVideoStateChanged?.invoke(STATE_AUTO_COMPLETE)
     }
 

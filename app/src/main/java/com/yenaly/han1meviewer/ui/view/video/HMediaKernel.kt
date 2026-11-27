@@ -117,6 +117,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     @Volatile private var cachedPosition = 0L
     @Volatile private var cachedDuration = 0L
     @Volatile private var cachedPlayWhenReady = false
+    private var videoSurface: Surface? = null
 
     private val samplePlayback: Runnable = object : Runnable {
         override fun run() {
@@ -198,18 +199,37 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
             exoPlayer.setMediaSource(videoSource)
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
+            cachedPlayWhenReady = true
             samplePlayback.run()
 //            callback = OnBufferingUpdate()
 
             val surfaceTexture = jzvd.textureView?.surfaceTexture
             if (surfaceTexture == null) {
                 Log.e(TAG, "❌ surfaceTexture is null, video surface not set")
+            } else {
+                attachVideoSurface(surfaceTexture)
             }
-            surfaceTexture?.let { exoPlayer.setVideoSurface(Surface(it)) }
+        }
+    }
+
+    private fun attachVideoSurface(texture: SurfaceTexture) {
+        val next = Surface(texture)
+        val previous = videoSurface
+        videoSurface = next
+        val apply = Runnable {
+            _exoPlayer?.setVideoSurface(next)
+            if (previous != null && previous !== next) previous.release()
+        }
+        val playerHandler = mMediaHandler
+        if (playerHandler != null && Looper.myLooper() != playerHandler.looper) {
+            playerHandler.post(apply)
+        } else {
+            apply.run()
         }
     }
 
     override fun start() {
+        cachedPlayWhenReady = true
         mMediaHandler?.post {
             _exoPlayer?.playWhenReady = true
         }
@@ -232,6 +252,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     }
 
     override fun pause() {
+        cachedPlayWhenReady = false
         mMediaHandler?.post {
             _exoPlayer?.playWhenReady = false
         }
@@ -240,6 +261,8 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     override fun isPlaying(): Boolean = cachedPlayWhenReady
 
     override fun seekTo(time: Long) {
+        cachedPosition = time.coerceAtLeast(0L)
+        cachedPlayWhenReady = true
         mMediaHandler?.post {
             if (time != prevSeek) {
                 _exoPlayer?.let { exoPlayer ->
@@ -248,7 +271,6 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
                     }
                     exoPlayer.seekTo(time)
                     exoPlayer.playWhenReady = true
-                    cachedPlayWhenReady = true
                     prevSeek = time
                     jzvd.seekToInAdvance = time
                 }
@@ -260,10 +282,14 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         if (mMediaHandler != null && mMediaHandlerThread != null && _exoPlayer != null) { //不知道有没有妖孽
             val tmpHandlerThread = mMediaHandlerThread
             val tmpMediaPlayer = exoPlayer
+            val surface = videoSurface
+            videoSurface = null
             SAVED_SURFACE = null
             mMediaHandler?.post {
                 mMediaHandler?.removeCallbacks(samplePlayback)
+                tmpMediaPlayer.setVideoSurface(null)
                 tmpMediaPlayer.release() //release就不能放到主线程里，界面会卡顿
+                surface?.release()
                 tmpHandlerThread.quit()
                 _exoPlayer = null
                 cachedPosition = 0L
@@ -301,6 +327,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        cachedPlayWhenReady = playWhenReady
         Log.i(TAG, "onPlayWhenReadyChanged: $playWhenReady, reason: $reason, " +
                 "playbackState=${_exoPlayer?.playbackState}")
         if (playWhenReady && _exoPlayer?.playbackState == Player.STATE_READY) {
@@ -373,7 +400,13 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
 
     override fun setSurface(surface: Surface?) {
         Log.e(TAG, "setSurface: $surface")
-        _exoPlayer?.setVideoSurface(surface)
+        val apply = Runnable { _exoPlayer?.setVideoSurface(surface) }
+        val playerHandler = mMediaHandler
+        if (playerHandler != null && Looper.myLooper() != playerHandler.looper) {
+            playerHandler.post(apply)
+        } else {
+            apply.run()
+        }
     }
 
 //    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
@@ -391,7 +424,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
             if (_exoPlayer == null) {
                 prepare()
             } else {
-                _exoPlayer?.setVideoSurface(Surface(surface))
+                attachVideoSurface(surface)
             }
         } else {
             jzvd.textureView.setSurfaceTexture(SAVED_SURFACE)
@@ -698,6 +731,7 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), HMediaKernel {
     }
 
     override fun seekTo(time: Long) {
+        mpvTimePos = time / 1000.0
         Log.i("seekTo","${ (time / 1000.0)}")
         MPVLib.command(arrayOf("seek", (time / 1000.0).toString(), "absolute", "exact"))
     }
